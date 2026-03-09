@@ -26,6 +26,26 @@ body {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
+.nav-tabs {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.nav-tabs a {
+  text-decoration: none;
+  color: #1e3a8a;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+}
+
+.nav-tabs a.active {
+  background: #1d4ed8;
+  color: white;
+  border-color: #1d4ed8;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
