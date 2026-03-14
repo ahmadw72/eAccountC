@@ -1,14 +1,17 @@
 const express = require('express');
 const Product = require('../models/Product');
+const { requireAuth, requireRoles } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.use(requireAuth);
 
 router.get('/', async (_req, res) => {
   const products = await Product.find().sort({ createdAt: -1 });
   res.json(products);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('super', 'supervisor'), async (req, res) => {
   try {
     const product = await Product.create(req.body);
     res.status(201).json(product);
@@ -17,9 +20,24 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+    const updates = {
+      price: req.body.price,
+      quantity: req.body.quantity,
+      reorderLevel: req.body.reorderLevel,
+      category: req.body.category,
+      name: req.body.name,
+      sku: req.body.sku,
+    };
+
+    Object.keys(updates).forEach((key) => {
+      if (updates[key] === undefined) {
+        delete updates[key];
+      }
+    });
+
+    const product = await Product.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     });
@@ -28,20 +46,43 @@ router.patch('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json(product);
+    return res.json(product);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.post('/:id/sell', async (req, res) => {
+  const quantity = Number(req.body.quantity || 1);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return res.status(400).json({ message: 'Sale quantity must be greater than zero' });
+  }
+
+  const product = await Product.findById(req.params.id);
+
+  if (!product) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  if (product.quantity < quantity) {
+    return res.status(400).json({ message: 'Not enough stock to complete sale' });
+  }
+
+  product.quantity -= quantity;
+  await product.save();
+
+  return res.json(product);
+});
+
+router.delete('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
   const product = await Product.findByIdAndDelete(req.params.id);
 
   if (!product) {
     return res.status(404).json({ message: 'Product not found' });
   }
 
-  res.status(204).send();
+  return res.status(204).send();
 });
 
 module.exports = router;
