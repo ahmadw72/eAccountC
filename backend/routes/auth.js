@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { createSession } = require('../lib/sessions');
 const { requireAuth } = require('../middleware/auth');
+const { SELLER_ROLE, normalizeRole } = require('../lib/roles');
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ async function ensureSeedUsers() {
   if (count === 0) {
     await User.createWithPassword({ username: 'superadmin', password: 'super123', role: 'super' });
     await User.createWithPassword({ username: 'supervisor1', password: 'supervisor123', role: 'supervisor' });
-    await User.createWithPassword({ username: 'seller1', password: 'user123', role: 'user' });
+    await User.createWithPassword({ username: 'seller1', password: 'user123', role: SELLER_ROLE });
   }
 
   seeded = true;
@@ -45,7 +46,7 @@ router.post('/login', async (req, res) => {
     user: {
       id: user._id,
       username: user.username,
-      role: user.role,
+      role: normalizeRole(user.role),
     },
   });
 });
