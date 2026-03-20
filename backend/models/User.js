@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const { SELLER_ROLE, LEGACY_SELLER_ROLE, normalizeRole } = require('../lib/roles');
 
-const allowedRoles = ['super', 'supervisor', 'user'];
+const allowedRoles = ['super', 'supervisor', SELLER_ROLE, LEGACY_SELLER_ROLE];
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -45,7 +46,7 @@ userSchema.methods.comparePassword = function comparePassword(password) {
 
 userSchema.statics.createWithPassword = async function createWithPassword({ username, password, role }) {
   const passwordHash = hashPassword(password);
-  return this.create({ username: username.toLowerCase(), passwordHash, role });
+  return this.create({ username: username.toLowerCase(), passwordHash, role: normalizeRole(role) });
 };
 
 module.exports = mongoose.model('User', userSchema);

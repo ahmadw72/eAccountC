@@ -97,3 +97,95 @@ tr.low {
 .hint {
   font-size: 0.92rem;
 }
+
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.secondary-button {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.active-tab {
+  background: #1d4ed8;
+  color: white;
+}
+
+.sales-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.sales-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sales-summary {
+  min-width: 150px;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #dbeafe;
+  display: grid;
+  justify-items: center;
+}
+
+.sales-summary strong {
+  font-size: 1.8rem;
+}
+
+.sales-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.sales-product {
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sales-product h3 {
+  margin: 0.15rem 0;
+}
+
+.sales-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.product-category {
+  margin: 0;
+  color: #2563eb;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.success-message {
+  color: #166534;
+  background: #dcfce7;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
