@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const SELLER_ROLE = 'seller';
+const DASHBOARD_PAGE = 'dashboard';
+const SALES_PAGE = 'sales';
 
 const initialProductForm = {
   name: '',
@@ -14,8 +17,25 @@ const initialProductForm = {
 const initialUserForm = {
   username: '',
   password: '',
-  role: 'user',
+  role: SELLER_ROLE,
 };
+
+function normalizeRole(role) {
+  return role === 'user' ? SELLER_ROLE : role;
+}
+
+function isSellerRole(role) {
+  return normalizeRole(role) === SELLER_ROLE;
+}
+
+function getRoleLabel(role) {
+  return isSellerRole(role) ? 'seller' : normalizeRole(role);
+}
+
+function getInitialPage() {
+  const hashPage = window.location.hash.replace('#', '');
+  return hashPage === SALES_PAGE ? SALES_PAGE : DASHBOARD_PAGE;
+}
 
 function apiFetch(path, options = {}, token) {
   return fetch(`${API_BASE}${path}`, {
@@ -39,7 +59,7 @@ function LoginPage({ onLogin, error }) {
   return (
     <section className="card login-card">
       <h2>Login</h2>
-      <p className="muted">Use your super user, supervisor, or user account credentials.</p>
+      <p className="muted">Use your super user, supervisor, or seller account credentials.</p>
       <form
         className="grid"
         onSubmit={(event) => {
@@ -71,6 +91,29 @@ function LoginPage({ onLogin, error }) {
   );
 }
 
+function Navigation({ canViewSalesPage, currentPage, onNavigate }) {
+  return (
+    <div className="page-tabs">
+      <button
+        type="button"
+        className={currentPage === DASHBOARD_PAGE ? 'secondary-button active-tab' : 'secondary-button'}
+        onClick={() => onNavigate(DASHBOARD_PAGE)}
+      >
+        Dashboard
+      </button>
+      {canViewSalesPage ? (
+        <button
+          type="button"
+          className={currentPage === SALES_PAGE ? 'secondary-button active-tab' : 'secondary-button'}
+          onClick={() => onNavigate(SALES_PAGE)}
+        >
+          Sales Page
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function ProductForm({ form, onChange, onSubmit }) {
   return (
     <section className="card">
@@ -94,7 +137,7 @@ function ProductForm({ form, onChange, onSubmit }) {
   );
 }
 
-function ProductsTable({ loading, products, canManageProducts, canSellProducts, onDelete, onSell, onUpdate }) {
+function ProductsTable({ loading, products, canManageProducts, onDelete, onUpdate }) {
   return (
     <section className="card">
       <h2>Current Stock</h2>
@@ -121,7 +164,6 @@ function ProductsTable({ loading, products, canManageProducts, canSellProducts, 
                 <td>{product.quantity}</td>
                 <td>${product.price}</td>
                 <td className="actions-cell">
-                  {canSellProducts ? <button onClick={() => onSell(product._id)}>Sell 1</button> : null}
                   {canManageProducts ? (
                     <>
                       <button onClick={() => onUpdate(product)}>+1 Qty</button>
@@ -138,12 +180,54 @@ function ProductsTable({ loading, products, canManageProducts, canSellProducts, 
   );
 }
 
+function SalesPage({ loading, products, onSell, saleFeedback }) {
+  return (
+    <section className="card sales-card">
+      <div className="sales-header">
+        <div>
+          <h2>Sales Page</h2>
+          <p className="muted">Only seller-category users can access and process sales from this page.</p>
+        </div>
+        <div className="sales-summary">
+          <strong>{products.length}</strong>
+          <span>Products Available</span>
+        </div>
+      </div>
+
+      {saleFeedback ? <p className="success-message">{saleFeedback}</p> : null}
+
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="sales-grid">
+          {products.map((product) => (
+            <article key={product._id} className="sales-product">
+              <div>
+                <p className="product-category">{product.category || 'General'}</p>
+                <h3>{product.name}</h3>
+                <p className="muted">SKU: {product.sku}</p>
+              </div>
+              <div className="sales-meta">
+                <span>${product.price}</span>
+                <span>{product.quantity} in stock</span>
+              </div>
+              <button type="button" disabled={product.quantity <= 0} onClick={() => onSell(product._id)}>
+                {product.quantity > 0 ? 'Complete Sale' : 'Out of Stock'}
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUser }) {
-  if (!['super', 'supervisor'].includes(user.role)) {
+  if (!['super', 'supervisor'].includes(normalizeRole(user.role))) {
     return null;
   }
 
-  const roleOptions = user.role === 'super' ? ['supervisor', 'user'] : ['user'];
+  const roleOptions = normalizeRole(user.role) === 'super' ? ['supervisor', SELLER_ROLE] : [SELLER_ROLE];
 
   return (
     <section className="card">
@@ -168,7 +252,7 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
         >
           {roleOptions.map((role) => (
             <option key={role} value={role}>
-              {role}
+              {getRoleLabel(role)}
             </option>
           ))}
         </select>
@@ -179,9 +263,9 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
         {users.map((entry) => (
           <li key={entry._id}>
             <span>
-              {entry.username} ({entry.role})
+              {entry.username} ({getRoleLabel(entry.role)})
             </span>
-            {entry.role !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
+            {normalizeRole(entry.role) !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
           </li>
         ))}
       </ul>
@@ -198,14 +282,33 @@ export default function App() {
   const [productForm, setProductForm] = useState(initialProductForm);
   const [userForm, setUserForm] = useState(initialUserForm);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(getInitialPage);
+  const [saleFeedback, setSaleFeedback] = useState('');
 
-  const canManageProducts = authUser && ['super', 'supervisor'].includes(authUser.role);
-  const canSellProducts = Boolean(authUser);
+  const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
+  const canManageProducts = normalizedRole && ['super', 'supervisor'].includes(normalizedRole);
+  const canViewSalesPage = normalizedRole ? isSellerRole(normalizedRole) : false;
 
   const lowStockCount = useMemo(
     () => products.filter((item) => item.quantity <= item.reorderLevel).length,
     [products]
   );
+
+  useEffect(() => {
+    function syncPageFromHash() {
+      setCurrentPage(getInitialPage());
+    }
+
+    window.addEventListener('hashchange', syncPageFromHash);
+    return () => window.removeEventListener('hashchange', syncPageFromHash);
+  }, []);
+
+  useEffect(() => {
+    if (currentPage === SALES_PAGE && !canViewSalesPage) {
+      window.location.hash = DASHBOARD_PAGE;
+      setCurrentPage(DASHBOARD_PAGE);
+    }
+  }, [canViewSalesPage, currentPage]);
 
   async function loadProducts(currentToken = token) {
     if (!currentToken) {
@@ -224,7 +327,7 @@ export default function App() {
   }
 
   async function loadUsers(currentToken = token, currentUser = authUser) {
-    if (!currentToken || !currentUser || !['super', 'supervisor'].includes(currentUser.role)) {
+    if (!currentToken || !currentUser || !['super', 'supervisor'].includes(normalizeRole(currentUser.role))) {
       setUsers([]);
       return;
     }
@@ -249,10 +352,15 @@ export default function App() {
     }
 
     const payload = await response.json();
+    const nextUser = { ...payload.user, role: normalizeRole(payload.user.role) };
+
+    setAuthError('');
     setToken(payload.token);
-    setAuthUser(payload.user);
+    setAuthUser(nextUser);
+    setCurrentPage(isSellerRole(nextUser.role) ? SALES_PAGE : DASHBOARD_PAGE);
+    window.location.hash = isSellerRole(nextUser.role) ? SALES_PAGE : DASHBOARD_PAGE;
     await loadProducts(payload.token);
-    await loadUsers(payload.token, payload.user);
+    await loadUsers(payload.token, nextUser);
   }
 
   function logout() {
@@ -261,11 +369,14 @@ export default function App() {
     setProducts([]);
     setUsers([]);
     setAuthError('');
+    setSaleFeedback('');
+    setCurrentPage(DASHBOARD_PAGE);
+    window.location.hash = DASHBOARD_PAGE;
   }
 
-  async function addProduct(event) {
+  async function createProduct(event) {
     event.preventDefault();
-    await apiFetch(
+    const response = await apiFetch(
       '/products',
       {
         method: 'POST',
@@ -279,42 +390,90 @@ export default function App() {
       token
     );
 
-    setProductForm(initialProductForm);
-    loadProducts();
+    if (response.ok) {
+      setAuthError('');
+      setProductForm(initialProductForm);
+      await loadProducts();
+    }
   }
 
-  async function removeProduct(id) {
-    await apiFetch(`/products/${id}`, { method: 'DELETE' }, token);
-    loadProducts();
+  async function deleteProduct(id) {
+    const response = await apiFetch(`/products/${id}`, { method: 'DELETE' }, token);
+    if (response.ok) {
+      setAuthError('');
+      await loadProducts();
+    }
   }
 
   async function sellProduct(id) {
-    await apiFetch(`/products/${id}/sell`, { method: 'POST', body: JSON.stringify({ quantity: 1 }) }, token);
-    loadProducts();
-  }
-
-  async function incrementQuantity(product) {
-    await apiFetch(
-      `/products/${product._id}`,
+    const response = await apiFetch(
+      `/products/${id}/sell`,
       {
-        method: 'PATCH',
-        body: JSON.stringify({ quantity: Number(product.quantity) + 1 }),
+        method: 'POST',
+        body: JSON.stringify({ quantity: 1 }),
       },
       token
     );
-    loadProducts();
+
+    if (response.ok) {
+      const soldProduct = products.find((product) => product._id === id);
+      setAuthError('');
+      setSaleFeedback(soldProduct ? `${soldProduct.name} sold successfully.` : 'Sale completed successfully.');
+      await loadProducts();
+    } else {
+      const payload = await response.json();
+      setAuthError(payload.message || 'Sale failed');
+    }
+  }
+
+  async function incrementProduct(product) {
+    const response = await apiFetch(
+      `/products/${product._id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity: product.quantity + 1 }),
+      },
+      token
+    );
+
+    if (response.ok) {
+      setAuthError('');
+      await loadProducts();
+    }
   }
 
   async function createUser(event) {
     event.preventDefault();
-    await apiFetch('/users', { method: 'POST', body: JSON.stringify(userForm) }, token);
-    setUserForm(initialUserForm);
-    loadUsers();
+    const response = await apiFetch(
+      '/users',
+      {
+        method: 'POST',
+        body: JSON.stringify(userForm),
+      },
+      token
+    );
+
+    if (response.ok) {
+      setAuthError('');
+      setUserForm(initialUserForm);
+      await loadUsers();
+    }
   }
 
-  async function removeUser(id) {
-    await apiFetch(`/users/${id}`, { method: 'DELETE' }, token);
-    loadUsers();
+  async function deleteUser(id) {
+    const response = await apiFetch(`/users/${id}`, { method: 'DELETE' }, token);
+    if (response.ok) {
+      await loadUsers();
+    }
+  }
+
+  function handleNavigate(page) {
+    if (page === SALES_PAGE && !canViewSalesPage) {
+      return;
+    }
+
+    setCurrentPage(page);
+    window.location.hash = page;
   }
 
   if (!authUser) {
@@ -322,7 +481,7 @@ export default function App() {
       <main className="page">
         <header className="header">
           <h1>Inventory Control System</h1>
-          <p>Role-based login for super users, supervisors, and users.</p>
+          <p>Manage stock, control users, and process seller-only sales.</p>
         </header>
         <LoginPage onLogin={handleLogin} error={authError} />
       </main>
@@ -332,34 +491,41 @@ export default function App() {
   return (
     <main className="page">
       <header className="header">
-        <h1>Inventory Control System</h1>
+        <h1>Inventory Control Dashboard</h1>
         <p>
-          Logged in as <strong>{authUser.username}</strong> ({authUser.role}) | Total Items: {products.length} | Low Stock
-          Alerts: {lowStockCount}
+          Welcome <strong>{authUser.username}</strong> ({getRoleLabel(authUser.role)}). Low stock items: {lowStockCount}
         </p>
-        <button onClick={logout}>Logout</button>
+        <div className="header-actions">
+          <Navigation canViewSalesPage={canViewSalesPage} currentPage={currentPage} onNavigate={handleNavigate} />
+          <button onClick={logout}>Logout</button>
+        </div>
       </header>
 
-      {canManageProducts ? <ProductForm form={productForm} onChange={setProductForm} onSubmit={addProduct} /> : null}
-
-      <ProductsTable
-        loading={loading}
-        products={products}
-        canManageProducts={canManageProducts}
-        canSellProducts={canSellProducts}
-        onDelete={removeProduct}
-        onSell={sellProduct}
-        onUpdate={incrementQuantity}
-      />
-
-      <UsersPanel
-        user={authUser}
-        users={users}
-        form={userForm}
-        onFormChange={setUserForm}
-        onCreateUser={createUser}
-        onDeleteUser={removeUser}
-      />
+      {currentPage === SALES_PAGE ? (
+        <SalesPage loading={loading} products={products} onSell={sellProduct} saleFeedback={saleFeedback} />
+      ) : (
+        <>
+          {canManageProducts ? (
+            <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} />
+          ) : null}
+          <ProductsTable
+            loading={loading}
+            products={products}
+            canManageProducts={canManageProducts}
+            onDelete={deleteProduct}
+            onUpdate={incrementProduct}
+          />
+          <UsersPanel
+            user={authUser}
+            users={users}
+            form={userForm}
+            onFormChange={setUserForm}
+            onCreateUser={createUser}
+            onDeleteUser={deleteUser}
+          />
+        </>
+      )}
+      {authError ? <p className="error">{authError}</p> : null}
     </main>
   );
 }

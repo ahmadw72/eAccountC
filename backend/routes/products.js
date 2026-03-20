@@ -1,6 +1,7 @@
 const express = require('express');
 const Product = require('../models/Product');
 const { requireAuth, requireRoles } = require('../middleware/auth');
+const { SELLER_ROLE } = require('../lib/roles');
 
 const router = express.Router();
 
@@ -52,7 +53,7 @@ router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
   }
 });
 
-router.post('/:id/sell', async (req, res) => {
+router.post('/:id/sell', requireRoles(SELLER_ROLE), async (req, res) => {
   const quantity = Number(req.body.quantity || 1);
 
   if (!Number.isFinite(quantity) || quantity <= 0) {

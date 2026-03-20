@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
+const { SELLER_ROLE, normalizeRole } = require('../lib/roles');
 
 const router = express.Router();
 
@@ -26,21 +27,23 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: 'Invalid role selected' });
   }
 
+  const normalizedRole = normalizeRole(role);
+
   if (req.auth.role === 'super') {
-    if (!['supervisor', 'user'].includes(role)) {
-      return res.status(403).json({ message: 'Super users can only add supervisors and users' });
+    if (!['supervisor', SELLER_ROLE].includes(normalizedRole)) {
+      return res.status(403).json({ message: 'Super users can only add supervisors and sellers' });
     }
   } else if (req.auth.role === 'supervisor') {
-    if (role !== 'user') {
-      return res.status(403).json({ message: 'Supervisors can only add users' });
+    if (normalizedRole !== SELLER_ROLE) {
+      return res.status(403).json({ message: 'Supervisors can only add sellers' });
     }
   } else {
     return res.status(403).json({ message: 'Insufficient permissions' });
   }
 
   try {
-    const user = await User.createWithPassword({ username, password, role });
-    return res.status(201).json({ id: user._id, username: user.username, role: user.role });
+    const user = await User.createWithPassword({ username, password, role: normalizedRole });
+    return res.status(201).json({ id: user._id, username: user.username, role: normalizeRole(user.role) });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -58,12 +61,12 @@ router.delete('/:id', async (req, res) => {
   }
 
   if (req.auth.role === 'super') {
-    if (!['supervisor', 'user'].includes(target.role)) {
-      return res.status(403).json({ message: 'Super users can only remove supervisors and users' });
+    if (!['supervisor', SELLER_ROLE].includes(normalizeRole(target.role))) {
+      return res.status(403).json({ message: 'Super users can only remove supervisors and sellers' });
     }
   } else if (req.auth.role === 'supervisor') {
-    if (target.role !== 'user') {
-      return res.status(403).json({ message: 'Supervisors can only remove users' });
+    if (normalizeRole(target.role) !== SELLER_ROLE) {
+      return res.status(403).json({ message: 'Supervisors can only remove sellers' });
     }
   } else {
     return res.status(403).json({ message: 'Insufficient permissions' });
