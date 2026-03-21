@@ -72,6 +72,23 @@ function Navigation({ canViewSalesPage, currentPage, onNavigate }) {
   );
 }
 
+function AccountMenu({ username, role, onLogout }) {
+  return (
+    <details className="account-menu">
+      <summary className="account-menu-trigger">
+        <span className="account-menu-label">Account</span>
+        <span className="account-menu-name">{username}</span>
+      </summary>
+      <div className="account-menu-panel">
+        <p className="account-menu-role">Signed in as {getRoleLabel(role)}</p>
+        <button type="button" className="account-menu-action" onClick={onLogout}>
+          Logout
+        </button>
+      </div>
+    </details>
+  );
+}
+
 function ProductForm({ form, onChange, onSubmit }) {
   return (
     <section className="card">
@@ -480,12 +497,16 @@ export default function App() {
   return (
     <main className="page">
       <header className="header">
-        <h1>Inventory Control Dashboard</h1>
-        <p>
-          Welcome <strong>{authUser.username}</strong> ({getRoleLabel(authUser.role)}). Low stock items: {lowStockCount}
-        </p>
-        <div className="header-actions">
-          <button onClick={logout}>Logout</button>
+        <div className="header-top">
+          <div>
+            <h1>Inventory Control Dashboard</h1>
+            <p>
+              Welcome <strong>{authUser.username}</strong> ({getRoleLabel(authUser.role)}). Low stock items: {lowStockCount}
+            </p>
+          </div>
+          <div className="header-actions">
+            <AccountMenu username={authUser.username} role={authUser.role} onLogout={logout} />
+          </div>
         </div>
       </header>
 
