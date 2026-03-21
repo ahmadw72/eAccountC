@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import LoginPage from './LoginPage';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 const SELLER_ROLE = 'seller';
@@ -46,49 +47,6 @@ function apiFetch(path, options = {}, token) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
-}
-
-function LoginPage({ onLogin, error }) {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
-
-  function updateField(event) {
-    const { name, value } = event.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
-  }
-
-  return (
-    <section className="card login-card">
-      <h2>Login</h2>
-      <p className="muted">Use your super user, supervisor, or seller account credentials.</p>
-      <form
-        className="grid"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onLogin(credentials);
-        }}
-      >
-        <input name="username" required placeholder="Username" value={credentials.username} onChange={updateField} />
-        <input
-          name="password"
-          required
-          placeholder="Password"
-          type="password"
-          value={credentials.password}
-          onChange={updateField}
-        />
-        <button type="submit">Sign in</button>
-      </form>
-      {error ? <p className="error">{error}</p> : null}
-      <div className="hint">
-        <strong>Default accounts:</strong>
-        <ul>
-          <li>superadmin / super123</li>
-          <li>supervisor1 / supervisor123</li>
-          <li>seller1 / user123</li>
-        </ul>
-      </div>
-    </section>
-  );
 }
 
 function Navigation({ canViewSalesPage, currentPage, onNavigate }) {
@@ -144,81 +102,131 @@ function ProductsTable({ loading, products, canManageProducts, onDelete, onUpdat
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>SKU</th>
-              <th>Category</th>
-              <th>Qty</th>
-              <th>Price</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product._id} className={product.quantity <= product.reorderLevel ? 'low' : ''}>
-                <td>{product.name}</td>
-                <td>{product.sku}</td>
-                <td>{product.category}</td>
-                <td>{product.quantity}</td>
-                <td>${product.price}</td>
-                <td className="actions-cell">
-                  {canManageProducts ? (
-                    <>
-                      <button onClick={() => onUpdate(product)}>+1 Qty</button>
-                      <button onClick={() => onDelete(product._id)}>Delete</button>
-                    </>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {products.map((product) => (
+            <li
+              key={product._id}
+              className={product.quantity <= product.reorderLevel ? 'low' : ''}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem',
+                borderBottom: '1px solid #eee',
+              }}
+            >
+              <div>
+                <strong style={{ display: 'block', fontSize: '1.1em' }}>{product.name}</strong>
+                <small style={{ color: '#666' }}>
+                  SKU: {product.sku} | Category: {product.category}
+                </small>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold' }}>{product.quantity} in stock</div>
+                  <div>${product.price}</div>
+                </div>
+                {canManageProducts ? (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => onUpdate(product)}>+1</button>
+                    <button onClick={() => onDelete(product._id)}>Delete</button>
+                  </div>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
 }
 
-function SalesPage({ loading, products, onSell, saleFeedback }) {
+function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVoucher, onCheckout, saleFeedback }) {
+  const voucherTotal = voucher.reduce((acc, item) => acc + item.price * item.voucherQuantity, 0);
+
   return (
-    <section className="card sales-card">
-      <div className="sales-header">
-        <div>
-          <h2>Sales Page</h2>
-          <p className="muted">Only seller-category users can access and process sales from this page.</p>
+    <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+      <section className="card sales-card" style={{ flex: 2 }}>
+        <div className="sales-header">
+          <div>
+            <h2>Sales Page</h2>
+            <p className="muted">Only seller-category users can access and process sales from this page.</p>
+          </div>
+          <div className="sales-summary">
+            <strong>{products.length}</strong>
+            <span>Products Available</span>
+          </div>
         </div>
-        <div className="sales-summary">
-          <strong>{products.length}</strong>
-          <span>Products Available</span>
-        </div>
-      </div>
 
-      {saleFeedback ? <p className="success-message">{saleFeedback}</p> : null}
+        {saleFeedback ? <p className="success-message">{saleFeedback}</p> : null}
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <div className="sales-grid">
-          {products.map((product) => (
-            <article key={product._id} className="sales-product">
-              <div>
-                <p className="product-category">{product.category || 'General'}</p>
-                <h3>{product.name}</h3>
-                <p className="muted">SKU: {product.sku}</p>
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <div className="sales-grid">
+            {products.map((product) => {
+              const inVoucher = voucher.find((v) => v._id === product._id);
+              const currentVoucherQty = inVoucher ? inVoucher.voucherQuantity : 0;
+              const remainingStock = product.quantity - currentVoucherQty;
+
+              return (
+                <article key={product._id} className="sales-product">
+                  <div>
+                    <p className="product-category">{product.category || 'General'}</p>
+                    <h3>{product.name}</h3>
+                    <p className="muted">SKU: {product.sku}</p>
+                  </div>
+                  <div className="sales-meta">
+                    <span>${product.price}</span>
+                    <span>{remainingStock} available</span>
+                  </div>
+                  <button type="button" disabled={remainingStock <= 0} onClick={() => onAddToVoucher(product)}>
+                    {remainingStock > 0 ? 'Add to Voucher' : 'Out of Stock'}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="card" style={{ flex: 1 }}>
+        <h2>Sales Voucher</h2>
+        {voucher.length === 0 ? (
+          <p>Voucher is empty.</p>
+        ) : (
+          <>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {voucher.map((item) => (
+                <li key={item._id} style={{ borderBottom: '1px solid #eee', padding: '0.5rem 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong>{item.name}</strong>
+                    <span>${(item.price * item.voucherQuantity).toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9em', color: '#666' }}>
+                    <span>
+                      {item.voucherQuantity} x ${item.price}
+                    </span>
+                    <button type="button" onClick={() => onRemoveFromVoucher(item._id)}>
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div style={{ marginTop: '1rem', borderTop: '2px solid #ddd', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2em', fontWeight: 'bold' }}>
+                <span>Total</span>
+                <span>${voucherTotal.toFixed(2)}</span>
               </div>
-              <div className="sales-meta">
-                <span>${product.price}</span>
-                <span>{product.quantity} in stock</span>
-              </div>
-              <button type="button" disabled={product.quantity <= 0} onClick={() => onSell(product._id)}>
-                {product.quantity > 0 ? 'Complete Sale' : 'Out of Stock'}
+              <button style={{ width: '100%', marginTop: '1rem' }} onClick={onCheckout}>
+                Checkout
               </button>
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -282,33 +290,17 @@ export default function App() {
   const [productForm, setProductForm] = useState(initialProductForm);
   const [userForm, setUserForm] = useState(initialUserForm);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(getInitialPage);
   const [saleFeedback, setSaleFeedback] = useState('');
+  const [voucher, setVoucher] = useState([]);
 
   const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
   const canManageProducts = normalizedRole && ['super', 'supervisor'].includes(normalizedRole);
-  const canViewSalesPage = normalizedRole ? isSellerRole(normalizedRole) : false;
+  const canSell = normalizedRole ? isSellerRole(normalizedRole) : false;
 
   const lowStockCount = useMemo(
     () => products.filter((item) => item.quantity <= item.reorderLevel).length,
     [products]
   );
-
-  useEffect(() => {
-    function syncPageFromHash() {
-      setCurrentPage(getInitialPage());
-    }
-
-    window.addEventListener('hashchange', syncPageFromHash);
-    return () => window.removeEventListener('hashchange', syncPageFromHash);
-  }, []);
-
-  useEffect(() => {
-    if (currentPage === SALES_PAGE && !canViewSalesPage) {
-      window.location.hash = DASHBOARD_PAGE;
-      setCurrentPage(DASHBOARD_PAGE);
-    }
-  }, [canViewSalesPage, currentPage]);
 
   async function loadProducts(currentToken = token) {
     if (!currentToken) {
@@ -357,8 +349,6 @@ export default function App() {
     setAuthError('');
     setToken(payload.token);
     setAuthUser(nextUser);
-    setCurrentPage(isSellerRole(nextUser.role) ? SALES_PAGE : DASHBOARD_PAGE);
-    window.location.hash = isSellerRole(nextUser.role) ? SALES_PAGE : DASHBOARD_PAGE;
     await loadProducts(payload.token);
     await loadUsers(payload.token, nextUser);
   }
@@ -370,8 +360,7 @@ export default function App() {
     setUsers([]);
     setAuthError('');
     setSaleFeedback('');
-    setCurrentPage(DASHBOARD_PAGE);
-    window.location.hash = DASHBOARD_PAGE;
+    setVoucher([]);
   }
 
   async function createProduct(event) {
@@ -405,25 +394,34 @@ export default function App() {
     }
   }
 
-  async function sellProduct(id) {
-    const response = await apiFetch(
-      `/products/${id}/sell`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ quantity: 1 }),
-      },
-      token
-    );
+  function addToVoucher(product) {
+    setVoucher((prev) => {
+      const existing = prev.find((item) => item._id === product._id);
+      if (existing) {
+        if (existing.voucherQuantity < product.quantity) {
+          return prev.map((item) => (item._id === product._id ? { ...item, voucherQuantity: item.voucherQuantity + 1 } : item));
+        }
+        return prev;
+      }
+      return [...prev, { ...product, voucherQuantity: 1 }];
+    });
+  }
 
-    if (response.ok) {
-      const soldProduct = products.find((product) => product._id === id);
-      setAuthError('');
-      setSaleFeedback(soldProduct ? `${soldProduct.name} sold successfully.` : 'Sale completed successfully.');
-      await loadProducts();
-    } else {
-      const payload = await response.json();
-      setAuthError(payload.message || 'Sale failed');
+  function removeFromVoucher(id) {
+    setVoucher((prev) => prev.filter((item) => item._id !== id));
+  }
+
+  async function checkoutVoucher() {
+    setAuthError('');
+    setSaleFeedback('');
+
+    for (const item of voucher) {
+      await apiFetch(`/products/${item._id}/sell`, { method: 'POST', body: JSON.stringify({ quantity: item.voucherQuantity }) }, token);
     }
+
+    setSaleFeedback('Voucher checkout successful.');
+    setVoucher([]);
+    await loadProducts();
   }
 
   async function incrementProduct(product) {
@@ -467,15 +465,6 @@ export default function App() {
     }
   }
 
-  function handleNavigate(page) {
-    if (page === SALES_PAGE && !canViewSalesPage) {
-      return;
-    }
-
-    setCurrentPage(page);
-    window.location.hash = page;
-  }
-
   if (!authUser) {
     return (
       <main className="page">
@@ -496,35 +485,34 @@ export default function App() {
           Welcome <strong>{authUser.username}</strong> ({getRoleLabel(authUser.role)}). Low stock items: {lowStockCount}
         </p>
         <div className="header-actions">
-          <Navigation canViewSalesPage={canViewSalesPage} currentPage={currentPage} onNavigate={handleNavigate} />
           <button onClick={logout}>Logout</button>
         </div>
       </header>
 
-      {currentPage === SALES_PAGE ? (
-        <SalesPage loading={loading} products={products} onSell={sellProduct} saleFeedback={saleFeedback} />
-      ) : (
-        <>
-          {canManageProducts ? (
-            <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} />
-          ) : null}
-          <ProductsTable
-            loading={loading}
-            products={products}
-            canManageProducts={canManageProducts}
-            onDelete={deleteProduct}
-            onUpdate={incrementProduct}
-          />
-          <UsersPanel
-            user={authUser}
-            users={users}
-            form={userForm}
-            onFormChange={setUserForm}
-            onCreateUser={createUser}
-            onDeleteUser={deleteUser}
-          />
-        </>
-      )}
+      {canManageProducts ? (
+        <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} />
+      ) : null}
+      <ProductsTable
+        loading={loading}
+        products={products}
+        canManageProducts={canManageProducts}
+        canSell={canSell}
+        onDelete={deleteProduct}
+        onUpdate={incrementProduct}
+        voucher={voucher}
+        onAddToVoucher={addToVoucher}
+        onRemoveFromVoucher={removeFromVoucher}
+        onCheckout={checkoutVoucher}
+        saleFeedback={saleFeedback}
+      />
+      <UsersPanel
+        user={authUser}
+        users={users}
+        form={userForm}
+        onFormChange={setUserForm}
+        onCreateUser={createUser}
+        onDeleteUser={deleteUser}
+      />
       {authError ? <p className="error">{authError}</p> : null}
     </main>
   );
