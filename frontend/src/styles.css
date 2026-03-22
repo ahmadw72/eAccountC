@@ -369,28 +369,34 @@ tr.low {
   margin-top: 0.5rem;
   color: #475569;
   font-size: 0.95rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .quantity-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .quantity-stepper-button {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.8rem;
+  height: 1.8rem;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
 .quantity-stepper-value {
-  min-width: 5.5rem;
+  min-width: 4.75rem;
+  font-size: 0.88rem;
+  line-height: 1.2;
 }
 
 .order-footer {
