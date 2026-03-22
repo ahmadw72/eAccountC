@@ -371,6 +371,28 @@ tr.low {
   font-size: 0.95rem;
 }
 
+.quantity-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.quantity-stepper-button {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.quantity-stepper-value {
+  min-width: 5.5rem;
+}
+
 .order-footer {
   margin-top: 1rem;
   border-top: 2px solid #dbeafe;
