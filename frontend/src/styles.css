@@ -327,7 +327,7 @@ tr.low {
 .order-table-header,
 .order-list-item {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(132px, 1.1fr) minmax(88px, 0.9fr);
+  grid-template-columns: minmax(0, 2fr) minmax(118px, 1fr) minmax(76px, 0.8fr);
   gap: 0.75rem;
   align-items: center;
   padding: 0.85rem 1rem;
@@ -336,10 +336,16 @@ tr.low {
 .order-table-header {
   background: #eff6ff;
   color: #1e3a8a;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+}
+
+.order-table-header span:nth-child(2),
+.order-table-header span:nth-child(3) {
+  justify-self: center;
+  text-align: center;
 }
 
 .order-list-item {
@@ -415,39 +421,42 @@ tr.low {
 
 .order-quantity-cell,
 .order-product-total {
-  justify-self: start;
+  justify-self: center;
 }
 
 .order-product-total {
   font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
 }
 
 .quantity-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.25rem;
   flex-wrap: nowrap;
   width: 100%;
-  max-width: 132px;
+  max-width: 118px;
 }
 
 .quantity-stepper-button {
-  width: 1.8rem;
-  height: 1.8rem;
+  width: 1.65rem;
+  height: 1.65rem;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   line-height: 1;
 }
 
 .quantity-stepper-input {
-  width: 3.25rem;
+  width: 2.8rem;
   min-width: 0;
-  padding: 0.45rem 0.35rem;
+  padding: 0.4rem 0.25rem;
   text-align: center;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
 }
 
 .order-footer {
@@ -485,7 +494,7 @@ tr.low {
 
   .order-table-header,
   .order-list-item {
-    grid-template-columns: minmax(0, 1.2fr) minmax(120px, 1fr) minmax(72px, 0.8fr);
+    grid-template-columns: minmax(0, 1.2fr) minmax(112px, 1fr) minmax(68px, 0.78fr);
     padding-inline: 0.75rem;
   }
 
