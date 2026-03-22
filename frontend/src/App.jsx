@@ -123,7 +123,7 @@ function ProductsTable({
   onAddToVoucher,
   onDecreaseVoucherQuantity,
   onIncreaseVoucherQuantity,
-  onRemoveFromVoucher,
+  onSetVoucherQuantity,
   onCheckout,
   saleFeedback,
 }) {
@@ -210,14 +210,18 @@ function ProductsTable({
           <p className="muted">Add products from the list to start a new order.</p>
         ) : (
           <>
-            <ul className="order-list">
+            <div className="order-list" role="table" aria-label="Current order items">
+              <div className="order-table-header" role="row">
+                <span role="columnheader">Product</span>
+                <span role="columnheader">Unit Price</span>
+                <span role="columnheader">Quantity</span>
+                <span role="columnheader">Total</span>
+              </div>
               {voucher.map((item) => (
-                <li key={item._id} className="order-list-item">
-                  <div className="order-line">
-                    <strong>{item.name}</strong>
-                    <span>${(item.price * item.voucherQuantity).toFixed(2)}</span>
-                  </div>
-                  <div className="order-line order-line-muted">
+                <div key={item._id} className="order-list-item" role="row">
+                  <strong className="order-product-name" role="cell">{item.name}</strong>
+                  <span className="order-unit-price" role="cell">${item.price.toFixed(2)}</span>
+                  <div className="order-quantity-cell" role="cell">
                     <div className="quantity-stepper" aria-label={`Adjust quantity for ${item.name}`}>
                       <button
                         type="button"
@@ -227,9 +231,15 @@ function ProductsTable({
                       >
                         −
                       </button>
-                      <span className="quantity-stepper-value">
-                        {item.voucherQuantity} × ${item.price.toFixed(2)}
-                      </span>
+                      <input
+                        type="number"
+                        className="quantity-stepper-input"
+                        aria-label={`Quantity for ${item.name}`}
+                        min="1"
+                        max={item.quantity}
+                        value={item.voucherQuantity}
+                        onChange={(event) => onSetVoucherQuantity(item._id, event.target.value, item.quantity)}
+                      />
                       <button
                         type="button"
                         className="secondary-button quantity-stepper-button"
@@ -240,13 +250,11 @@ function ProductsTable({
                         +
                       </button>
                     </div>
-                    <button type="button" className="secondary-button" onClick={() => onRemoveFromVoucher(item._id)}>
-                      Remove
-                    </button>
                   </div>
-                </li>
+                  <span className="order-product-total" role="cell">${(item.price * item.voucherQuantity).toFixed(2)}</span>
+                </div>
               ))}
-            </ul>
+            </div>
 
             <div className="order-footer">
               <div className="order-line order-total">
@@ -530,10 +538,6 @@ export default function App() {
     });
   }
 
-  function removeFromVoucher(id) {
-    setVoucher((prev) => prev.filter((item) => item._id !== id));
-  }
-
   function decreaseVoucherQuantity(id) {
     setVoucher((prev) =>
       prev.flatMap((item) => {
@@ -546,6 +550,34 @@ export default function App() {
         }
 
         return [{ ...item, voucherQuantity: item.voucherQuantity - 1 }];
+      })
+    );
+  }
+
+  function setVoucherQuantity(id, value, maxQuantity) {
+    if (value === '') {
+      return;
+    }
+
+    const parsedValue = Number(value);
+
+    setVoucher((prev) =>
+      prev.flatMap((item) => {
+        if (item._id !== id) {
+          return [item];
+        }
+
+        if (Number.isNaN(parsedValue)) {
+          return [item];
+        }
+
+        const nextQuantity = Math.min(Math.max(Math.trunc(parsedValue), 0), maxQuantity);
+
+        if (nextQuantity <= 0) {
+          return [];
+        }
+
+        return [{ ...item, voucherQuantity: nextQuantity }];
       })
     );
   }
@@ -646,7 +678,7 @@ export default function App() {
         onAddToVoucher={addToVoucher}
         onDecreaseVoucherQuantity={decreaseVoucherQuantity}
         onIncreaseVoucherQuantity={addToVoucher}
-        onRemoveFromVoucher={removeFromVoucher}
+        onSetVoucherQuantity={setVoucherQuantity}
         onCheckout={checkoutVoucher}
         saleFeedback={saleFeedback}
       />
