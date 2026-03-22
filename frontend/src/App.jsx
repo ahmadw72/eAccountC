@@ -212,15 +212,16 @@ function ProductsTable({
           <>
             <div className="order-list" role="table" aria-label="Current order items">
               <div className="order-table-header" role="row">
-                <span role="columnheader">Product</span>
-                <span role="columnheader">Unit Price</span>
+                <span role="columnheader">Item</span>
                 <span role="columnheader">Quantity</span>
                 <span role="columnheader">Total</span>
               </div>
               {voucher.map((item) => (
                 <div key={item._id} className="order-list-item" role="row">
-                  <strong className="order-product-name" role="cell">{item.name}</strong>
-                  <span className="order-unit-price" role="cell">${item.price.toFixed(2)}</span>
+                  <div className="order-item-details" role="cell">
+                    <strong className="order-product-name">{item.name}</strong>
+                    <span className="order-unit-price">${item.price.toFixed(2)}</span>
+                  </div>
                   <div className="order-quantity-cell" role="cell">
                     <div className="quantity-stepper" aria-label={`Adjust quantity for ${item.name}`}>
                       <button
