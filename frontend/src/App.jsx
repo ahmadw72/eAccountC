@@ -112,49 +112,134 @@ function ProductForm({ form, onChange, onSubmit }) {
   );
 }
 
-function ProductsTable({ loading, products, canManageProducts, onDelete, onUpdate }) {
-  return (
-    <section className="card">
-      <h2>Current Stock</h2>
+function ProductsTable({
+  loading,
+  products,
+  canManageProducts,
+  canSell,
+  onDelete,
+  onUpdate,
+  voucher,
+  onAddToVoucher,
+  onRemoveFromVoucher,
+  onCheckout,
+  saleFeedback,
+}) {
+  const voucherTotal = voucher.reduce((acc, item) => acc + item.price * item.voucherQuantity, 0);
+
+  const stockList = (
+    <section className="card stock-card">
+      <div className="stock-header">
+        <div>
+          <h2>Current Stock</h2>
+          <p className="muted">Review product availability and build an order from this page.</p>
+        </div>
+        {canSell ? (
+          <div className="sales-summary compact">
+            <strong>{voucher.length}</strong>
+            <span>Items in Order</span>
+          </div>
+        ) : null}
+      </div>
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {products.map((product) => (
-            <li
-              key={product._id}
-              className={product.quantity <= product.reorderLevel ? 'low' : ''}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem',
-                borderBottom: '1px solid #eee',
-              }}
-            >
-              <div>
-                <strong style={{ display: 'block', fontSize: '1.1em' }}>{product.name}</strong>
-                <small style={{ color: '#666' }}>
-                  SKU: {product.sku} | Category: {product.category}
-                </small>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 'bold' }}>{product.quantity} in stock</div>
-                  <div>${product.price}</div>
+        <ul className="product-list">
+          {products.map((product) => {
+            const inVoucher = voucher.find((item) => item._id === product._id);
+            const currentVoucherQty = inVoucher ? inVoucher.voucherQuantity : 0;
+            const remainingStock = product.quantity - currentVoucherQty;
+
+            return (
+              <li key={product._id} className={product.quantity <= product.reorderLevel ? 'product-list-item low' : 'product-list-item'}>
+                <div>
+                  <strong className="product-title">{product.name}</strong>
+                  <small className="product-subtitle">
+                    SKU: {product.sku} | Category: {product.category || 'General'}
+                  </small>
                 </div>
-                {canManageProducts ? (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => onUpdate(product)}>+1</button>
-                    <button onClick={() => onDelete(product._id)}>Delete</button>
+                <div className="product-list-actions">
+                  <div className="product-metrics">
+                    <div className="product-stock">{remainingStock} available</div>
+                    <div>${product.price}</div>
                   </div>
-                ) : null}
-              </div>
-            </li>
-          ))}
+                  {canManageProducts ? (
+                    <div className="inline-actions">
+                      <button type="button" onClick={() => onUpdate(product)}>+1</button>
+                      <button type="button" onClick={() => onDelete(product._id)}>Delete</button>
+                    </div>
+                  ) : null}
+                  {canSell ? (
+                    <button type="button" disabled={remainingStock <= 0} onClick={() => onAddToVoucher(product)}>
+                      {remainingStock > 0 ? 'Add to Order' : 'Out of Stock'}
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
+  );
+
+  if (!canSell) {
+    return stockList;
+  }
+
+  return (
+    <div className="product-page-layout">
+      {stockList}
+      <aside className="card order-pane">
+        <div className="order-pane-header">
+          <div>
+            <h2>Order Pane</h2>
+            <p className="muted">Track the current order before checkout.</p>
+          </div>
+          <div className="sales-summary compact">
+            <strong>{voucher.reduce((acc, item) => acc + item.voucherQuantity, 0)}</strong>
+            <span>Total Units</span>
+          </div>
+        </div>
+
+        {saleFeedback ? <p className="success-message">{saleFeedback}</p> : null}
+
+        {voucher.length === 0 ? (
+          <p className="muted">Add products from the list to start a new order.</p>
+        ) : (
+          <>
+            <ul className="order-list">
+              {voucher.map((item) => (
+                <li key={item._id} className="order-list-item">
+                  <div className="order-line">
+                    <strong>{item.name}</strong>
+                    <span>${(item.price * item.voucherQuantity).toFixed(2)}</span>
+                  </div>
+                  <div className="order-line order-line-muted">
+                    <span>
+                      {item.voucherQuantity} × ${item.price.toFixed(2)}
+                    </span>
+                    <button type="button" className="secondary-button" onClick={() => onRemoveFromVoucher(item._id)}>
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="order-footer">
+              <div className="order-line order-total">
+                <span>Total</span>
+                <span>${voucherTotal.toFixed(2)}</span>
+              </div>
+              <button type="button" className="checkout-button" onClick={onCheckout}>
+                Checkout Order
+              </button>
+            </div>
+          </>
+        )}
+      </aside>
+    </div>
   );
 }
 
