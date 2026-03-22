@@ -121,6 +121,8 @@ function ProductsTable({
   onUpdate,
   voucher,
   onAddToVoucher,
+  onDecreaseVoucherQuantity,
+  onIncreaseVoucherQuantity,
   onRemoveFromVoucher,
   onCheckout,
   saleFeedback,
@@ -216,9 +218,28 @@ function ProductsTable({
                     <span>${(item.price * item.voucherQuantity).toFixed(2)}</span>
                   </div>
                   <div className="order-line order-line-muted">
-                    <span>
-                      {item.voucherQuantity} × ${item.price.toFixed(2)}
-                    </span>
+                    <div className="quantity-stepper" aria-label={`Adjust quantity for ${item.name}`}>
+                      <button
+                        type="button"
+                        className="secondary-button quantity-stepper-button"
+                        aria-label={`Decrease quantity for ${item.name}`}
+                        onClick={() => onDecreaseVoucherQuantity(item._id)}
+                      >
+                        −
+                      </button>
+                      <span className="quantity-stepper-value">
+                        {item.voucherQuantity} × ${item.price.toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        className="secondary-button quantity-stepper-button"
+                        aria-label={`Increase quantity for ${item.name}`}
+                        disabled={item.voucherQuantity >= item.quantity}
+                        onClick={() => onIncreaseVoucherQuantity(item)}
+                      >
+                        +
+                      </button>
+                    </div>
                     <button type="button" className="secondary-button" onClick={() => onRemoveFromVoucher(item._id)}>
                       Remove
                     </button>
@@ -513,6 +534,22 @@ export default function App() {
     setVoucher((prev) => prev.filter((item) => item._id !== id));
   }
 
+  function decreaseVoucherQuantity(id) {
+    setVoucher((prev) =>
+      prev.flatMap((item) => {
+        if (item._id !== id) {
+          return [item];
+        }
+
+        if (item.voucherQuantity <= 1) {
+          return [];
+        }
+
+        return [{ ...item, voucherQuantity: item.voucherQuantity - 1 }];
+      })
+    );
+  }
+
   async function checkoutVoucher() {
     setAuthError('');
     setSaleFeedback('');
@@ -607,6 +644,8 @@ export default function App() {
         onUpdate={incrementProduct}
         voucher={voucher}
         onAddToVoucher={addToVoucher}
+        onDecreaseVoucherQuantity={decreaseVoucherQuantity}
+        onIncreaseVoucherQuantity={addToVoucher}
         onRemoveFromVoucher={removeFromVoucher}
         onCheckout={checkoutVoucher}
         saleFeedback={saleFeedback}
