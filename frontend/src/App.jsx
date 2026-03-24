@@ -10,6 +10,8 @@ const initialProductForm = {
   name: '',
   sku: '',
   category: '',
+  supplier: '',
+  manufacturer: '',
   quantity: 0,
   price: 0,
   reorderLevel: 5,
@@ -157,7 +159,7 @@ function ProductsTable({
                 <div>
                   <strong className="product-title">{product.name}</strong>
                   <small className="product-subtitle">
-                    SKU: {product.sku} | Category: {product.category || 'General'}
+                    SKU: {product.sku} | Category: {product.category || 'General'} | Supplier: {product.supplier || 'N/A'} | Manufacturer: {product.manufacturer || 'N/A'}
                   </small>
                 </div>
                 <div className="product-list-actions">
@@ -307,6 +309,7 @@ function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVou
                     <p className="product-category">{product.category || 'General'}</p>
                     <h3>{product.name}</h3>
                     <p className="muted">SKU: {product.sku}</p>
+                    <p className="muted">Supplier: {product.supplier || 'N/A'} · Manufacturer: {product.manufacturer || 'N/A'}</p>
                   </div>
                   <div className="sales-meta">
                     <span>${product.price}</span>
