@@ -295,6 +295,13 @@ tr.low {
   flex-wrap: wrap;
 }
 
+.product-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
 .product-page-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
