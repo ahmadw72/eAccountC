@@ -28,6 +28,8 @@ API runs on `http://localhost:5000`.
 - `POST /api/products`
 - `PATCH /api/products/:id`
 - `DELETE /api/products/:id`
+- `GET /api/orders`
+- `POST /api/orders`
 
 ## Frontend Setup
 
@@ -51,3 +53,5 @@ VITE_API_BASE=http://localhost:5000/api
 - View stock table
 - Low-stock highlighting using reorder level
 - Delete products
+- Create orders with unique 12-character alphanumeric IDs
+- Save and view past orders from the order pane
