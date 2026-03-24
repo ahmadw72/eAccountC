@@ -28,6 +28,8 @@ router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
       quantity: req.body.quantity,
       reorderLevel: req.body.reorderLevel,
       category: req.body.category,
+      supplier: req.body.supplier,
+      manufacturer: req.body.manufacturer,
       name: req.body.name,
       sku: req.body.sku,
     };

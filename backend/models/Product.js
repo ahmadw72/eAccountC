@@ -19,6 +19,16 @@ const productSchema = new mongoose.Schema(
       default: 'General',
       trim: true,
     },
+    supplier: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    manufacturer: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     quantity: {
       type: Number,
       required: true,
