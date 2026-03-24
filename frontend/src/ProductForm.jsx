@@ -1,17 +1,28 @@
 export default function ProductForm({ form, onChange, onSubmit }) {
+  const fields = [
+    { key: 'name', required: true, type: 'text' },
+    { key: 'sku', required: true, type: 'text' },
+    { key: 'category', required: false, type: 'text' },
+    { key: 'supplier', required: false, type: 'text' },
+    { key: 'manufacturer', required: false, type: 'text' },
+    { key: 'quantity', required: false, type: 'number', min: '0' },
+    { key: 'price', required: false, type: 'number', min: '0', step: '0.01' },
+    { key: 'reorderLevel', required: false, type: 'number', min: '0' },
+  ];
+
   return (
     <section className="card">
       <h2>Add Product</h2>
       <form className="grid" onSubmit={onSubmit}>
-        {Object.entries(form).map(([key, value]) => (
+        {fields.map(({ key, required, type, min, step }) => (
           <input
             key={key}
-            required={key === 'name' || key === 'sku'}
-            type={['quantity', 'price', 'reorderLevel'].includes(key) ? 'number' : 'text'}
-            min={['quantity', 'price', 'reorderLevel'].includes(key) ? '0' : undefined}
-            step={key === 'price' ? '0.01' : undefined}
+            required={required}
+            type={type}
+            min={min}
+            step={step}
             placeholder={key}
-            value={value}
+            value={form[key] ?? ''}
             onChange={(event) => onChange((prev) => ({ ...prev, [key]: event.target.value }))}
           />
         ))}
