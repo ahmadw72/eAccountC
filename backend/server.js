@@ -5,6 +5,7 @@ const cors = require('cors');
 const productRoutes = require('./routes/products');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
+const orderRoutes = require('./routes/orders');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +20,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/orders', orderRoutes);
 
 async function start() {
   try {

@@ -29,6 +29,11 @@ const initialProductFilters = {
   manufacturer: '',
 };
 
+function generateOrderId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 function normalizeRole(role) {
   return role === 'user' ? SELLER_ROLE : role;
 }
@@ -147,6 +152,8 @@ function ProductsTable({
   onSetVoucherQuantity,
   onCheckout,
   saleFeedback,
+  currentOrderId,
+  orderHistory,
 }) {
   const voucherTotal = voucher.reduce((acc, item) => acc + item.price * item.voucherQuantity, 0);
 
@@ -240,7 +247,7 @@ function ProductsTable({
       <aside className="card order-pane">
         <div className="order-pane-header">
           <div>
-            <h2>Order Pane</h2>
+            <h2>{`Order # ${currentOrderId}`}</h2>
             <p className="muted">Track the current order before checkout.</p>
           </div>
           <div className="sales-summary compact">
@@ -313,6 +320,31 @@ function ProductsTable({
             </div>
           </>
         )}
+
+        <div className="order-history">
+          <h3>Saved Orders</h3>
+          {orderHistory.length === 0 ? (
+            <p className="muted">No saved orders yet.</p>
+          ) : (
+            <div className="order-history-list">
+              {orderHistory.map((order) => (
+                <details key={order._id} className="order-history-item">
+                  <summary>
+                    <strong>{`Order # ${order.orderId}`}</strong> · ${Number(order.totalAmount).toFixed(2)}
+                  </summary>
+                  <p className="muted">{new Date(order.createdAt).toLocaleString()}</p>
+                  <ul>
+                    {order.items.map((item) => (
+                      <li key={`${order._id}-${item.productId}`}>
+                        {item.name} ({item.quantity} × ${Number(item.unitPrice).toFixed(2)})
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ))}
+            </div>
+          )}
+        </div>
       </aside>
     </div>
   );
@@ -471,6 +503,8 @@ export default function App() {
   const [saleFeedback, setSaleFeedback] = useState('');
   const [voucher, setVoucher] = useState([]);
   const [productFilters, setProductFilters] = useState(initialProductFilters);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [currentOrderId, setCurrentOrderId] = useState(generateOrderId);
 
   const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
   const canManageProducts = normalizedRole && ['super', 'supervisor'].includes(normalizedRole);
@@ -526,6 +560,18 @@ export default function App() {
     }
   }
 
+  async function loadOrders(currentToken = token, currentUser = authUser) {
+    if (!currentToken || !currentUser || !isSellerRole(currentUser.role)) {
+      setOrderHistory([]);
+      return;
+    }
+
+    const response = await apiFetch('/orders', {}, currentToken);
+    if (response.ok) {
+      setOrderHistory(await response.json());
+    }
+  }
+
   async function handleLogin(credentials) {
     setAuthError('');
     const response = await apiFetch('/auth/login', {
@@ -547,6 +593,7 @@ export default function App() {
     setAuthUser(nextUser);
     await loadProducts(payload.token);
     await loadUsers(payload.token, nextUser);
+    await loadOrders(payload.token, nextUser);
   }
 
   function logout() {
@@ -558,6 +605,8 @@ export default function App() {
     setSaleFeedback('');
     setVoucher([]);
     setProductFilters(initialProductFilters);
+    setOrderHistory([]);
+    setCurrentOrderId(generateOrderId());
   }
 
   function handleProductFilterChange(key, value) {
@@ -656,13 +705,29 @@ export default function App() {
     setAuthError('');
     setSaleFeedback('');
 
-    for (const item of voucher) {
-      await apiFetch(`/products/${item._id}/sell`, { method: 'POST', body: JSON.stringify({ quantity: item.voucherQuantity }) }, token);
+    const response = await apiFetch(
+      '/orders',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          orderId: currentOrderId,
+          items: voucher.map((item) => ({ productId: item._id, quantity: item.voucherQuantity })),
+        }),
+      },
+      token
+    );
+
+    if (!response.ok) {
+      const payload = await response.json();
+      setAuthError(payload.message || 'Failed to checkout order.');
+      return;
     }
 
-    setSaleFeedback('Voucher checkout successful.');
+    setSaleFeedback(`Order # ${currentOrderId} checkout successful.`);
     setVoucher([]);
+    setCurrentOrderId(generateOrderId());
     await loadProducts();
+    await loadOrders();
   }
 
   async function incrementProduct(product) {
@@ -753,6 +818,8 @@ export default function App() {
         onSetVoucherQuantity={setVoucherQuantity}
         onCheckout={checkoutVoucher}
         saleFeedback={saleFeedback}
+        currentOrderId={currentOrderId}
+        orderHistory={orderHistory}
       />
       <UsersPanel
         user={authUser}
