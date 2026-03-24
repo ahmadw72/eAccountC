@@ -23,6 +23,12 @@ const initialUserForm = {
   role: SELLER_ROLE,
 };
 
+const initialProductFilters = {
+  name: '',
+  category: '',
+  manufacturer: '',
+};
+
 function normalizeRole(role) {
   return role === 'user' ? SELLER_ROLE : role;
 }
@@ -128,6 +134,8 @@ function ProductForm({ form, onChange, onSubmit }) {
 function ProductsTable({
   loading,
   products,
+  filters,
+  onFilterChange,
   canManageProducts,
   canSell,
   onDelete,
@@ -156,8 +164,32 @@ function ProductsTable({
           </div>
         ) : null}
       </div>
+      {canSell ? (
+        <div className="product-filters">
+          <input
+            type="text"
+            placeholder="Search by name"
+            value={filters.name}
+            onChange={(event) => onFilterChange('name', event.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Search by category"
+            value={filters.category}
+            onChange={(event) => onFilterChange('category', event.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Search by manufacturer"
+            value={filters.manufacturer}
+            onChange={(event) => onFilterChange('manufacturer', event.target.value)}
+          />
+        </div>
+      ) : null}
       {loading ? (
         <p>Loading...</p>
+      ) : products.length === 0 ? (
+        <p className="muted">No products match the current search filters.</p>
       ) : (
         <ul className="product-list">
           {products.map((product) => {
@@ -438,6 +470,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [saleFeedback, setSaleFeedback] = useState('');
   const [voucher, setVoucher] = useState([]);
+  const [productFilters, setProductFilters] = useState(initialProductFilters);
 
   const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
   const canManageProducts = normalizedRole && ['super', 'supervisor'].includes(normalizedRole);
@@ -447,6 +480,23 @@ export default function App() {
     () => products.filter((item) => item.quantity <= item.reorderLevel).length,
     [products]
   );
+  const filteredProducts = useMemo(() => {
+    const nameFilter = productFilters.name.trim().toLowerCase();
+    const categoryFilter = productFilters.category.trim().toLowerCase();
+    const manufacturerFilter = productFilters.manufacturer.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const productName = (product.name || '').toLowerCase();
+      const productCategory = (product.category || '').toLowerCase();
+      const productManufacturer = (product.manufacturer || '').toLowerCase();
+
+      const matchesName = !nameFilter || productName.includes(nameFilter);
+      const matchesCategory = !categoryFilter || productCategory.includes(categoryFilter);
+      const matchesManufacturer = !manufacturerFilter || productManufacturer.includes(manufacturerFilter);
+
+      return matchesName && matchesCategory && matchesManufacturer;
+    });
+  }, [productFilters, products]);
 
   async function loadProducts(currentToken = token) {
     if (!currentToken) {
@@ -507,6 +557,11 @@ export default function App() {
     setAuthError('');
     setSaleFeedback('');
     setVoucher([]);
+    setProductFilters(initialProductFilters);
+  }
+
+  function handleProductFilterChange(key, value) {
+    setProductFilters((prev) => ({ ...prev, [key]: value }));
   }
 
   async function createProduct(event) {
@@ -684,7 +739,9 @@ export default function App() {
       ) : null}
       <ProductsTable
         loading={loading}
-        products={products}
+        products={filteredProducts}
+        filters={productFilters}
+        onFilterChange={handleProductFilterChange}
         canManageProducts={canManageProducts}
         canSell={canSell}
         onDelete={deleteProduct}
