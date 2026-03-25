@@ -2,13 +2,14 @@ const express = require('express');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { SELLER_ROLE, normalizeRole } = require('../lib/roles');
+const { ALL_PERMISSIONS, normalizePermissions } = require('../lib/permissions');
 
 const router = express.Router();
 
 router.use(requireAuth);
 
 router.get('/', async (req, res) => {
-  if (!['super', 'supervisor'].includes(req.auth.role)) {
+  if (req.auth.role !== 'super') {
     return res.status(403).json({ message: 'Insufficient permissions' });
   }
 
@@ -17,7 +18,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password, role, permissions = [] } = req.body;
 
   if (!username || !password || !role) {
     return res.status(400).json({ message: 'Username, password and role are required' });
@@ -29,21 +30,32 @@ router.post('/', async (req, res) => {
 
   const normalizedRole = normalizeRole(role);
 
-  if (req.auth.role === 'super') {
-    if (!['supervisor', SELLER_ROLE].includes(normalizedRole)) {
-      return res.status(403).json({ message: 'Super users can only add supervisors and sellers' });
-    }
-  } else if (req.auth.role === 'supervisor') {
-    if (normalizedRole !== SELLER_ROLE) {
-      return res.status(403).json({ message: 'Supervisors can only add sellers' });
-    }
-  } else {
+  if (req.auth.role !== 'super') {
     return res.status(403).json({ message: 'Insufficient permissions' });
   }
 
+  if (!['supervisor', SELLER_ROLE].includes(normalizedRole)) {
+    return res.status(403).json({ message: 'Super users can only add supervisors and sellers' });
+  }
+
+  const normalizedPermissions = normalizePermissions(permissions);
+  if (normalizedPermissions.length !== permissions.length) {
+    return res.status(400).json({ message: `Invalid permission selected. Allowed: ${ALL_PERMISSIONS.join(', ')}` });
+  }
+
   try {
-    const user = await User.createWithPassword({ username, password, role: normalizedRole });
-    return res.status(201).json({ id: user._id, username: user.username, role: normalizeRole(user.role) });
+    const user = await User.createWithPassword({
+      username,
+      password,
+      role: normalizedRole,
+      permissions: normalizedPermissions,
+    });
+    return res.status(201).json({
+      id: user._id,
+      username: user.username,
+      role: normalizeRole(user.role),
+      permissions: user.permissions || [],
+    });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -60,16 +72,12 @@ router.delete('/:id', async (req, res) => {
     return res.status(403).json({ message: 'Cannot remove super users' });
   }
 
-  if (req.auth.role === 'super') {
-    if (!['supervisor', SELLER_ROLE].includes(normalizeRole(target.role))) {
-      return res.status(403).json({ message: 'Super users can only remove supervisors and sellers' });
-    }
-  } else if (req.auth.role === 'supervisor') {
-    if (normalizeRole(target.role) !== SELLER_ROLE) {
-      return res.status(403).json({ message: 'Supervisors can only remove sellers' });
-    }
-  } else {
+  if (req.auth.role !== 'super') {
     return res.status(403).json({ message: 'Insufficient permissions' });
+  }
+
+  if (!['supervisor', SELLER_ROLE].includes(normalizeRole(target.role))) {
+    return res.status(403).json({ message: 'Super users can only remove supervisors and sellers' });
   }
 
   await User.findByIdAndDelete(req.params.id);

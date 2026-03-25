@@ -63,6 +63,20 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    refundedAt: {
+      type: Date,
+      default: null,
+    },
+    refundReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    refundedBy: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );

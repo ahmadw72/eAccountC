@@ -3,8 +3,19 @@ import LoginPage from './LoginPage';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 const SELLER_ROLE = 'seller';
-const DASHBOARD_PAGE = 'dashboard';
-const SALES_PAGE = 'sales';
+const PERMISSIONS = {
+  SELL_PRODUCTS: 'sell_products',
+  ADD_PRODUCTS_NO_PRICING: 'add_products_no_pricing',
+  MANAGE_PRODUCT_PRICING: 'manage_product_pricing',
+  REFUND_COMPLETED_SALES: 'refund_completed_sales',
+};
+
+const PERMISSION_LABELS = {
+  [PERMISSIONS.SELL_PRODUCTS]: 'Right to sell products (Sales page access only)',
+  [PERMISSIONS.ADD_PRODUCTS_NO_PRICING]: 'Right to add products without sale/buy prices',
+  [PERMISSIONS.MANAGE_PRODUCT_PRICING]: 'Right to add products with sale/buy prices and update existing pricing',
+  [PERMISSIONS.REFUND_COMPLETED_SALES]: 'Right to reverse completed sales orders with refund',
+};
 
 const initialProductForm = {
   name: '',
@@ -22,6 +33,7 @@ const initialUserForm = {
   username: '',
   password: '',
   role: SELLER_ROLE,
+  permissions: [],
 };
 
 const initialProductFilters = {
@@ -55,11 +67,6 @@ function getPurchasePrice(product) {
   return Number(product.purchasePrice ?? 0);
 }
 
-function getInitialPage() {
-  const hashPage = window.location.hash.replace('#', '');
-  return hashPage === SALES_PAGE ? SALES_PAGE : DASHBOARD_PAGE;
-}
-
 function apiFetch(path, options = {}, token) {
   return fetch(`${API_BASE}${path}`, {
     ...options,
@@ -71,27 +78,8 @@ function apiFetch(path, options = {}, token) {
   });
 }
 
-function Navigation({ canViewSalesPage, currentPage, onNavigate }) {
-  return (
-    <div className="page-tabs">
-      <button
-        type="button"
-        className={currentPage === DASHBOARD_PAGE ? 'secondary-button active-tab' : 'secondary-button'}
-        onClick={() => onNavigate(DASHBOARD_PAGE)}
-      >
-        Dashboard
-      </button>
-      {canViewSalesPage ? (
-        <button
-          type="button"
-          className={currentPage === SALES_PAGE ? 'secondary-button active-tab' : 'secondary-button'}
-          onClick={() => onNavigate(SALES_PAGE)}
-        >
-          Sales Page
-        </button>
-      ) : null}
-    </div>
-  );
+function hasPermission(user, permission) {
+  return Boolean(user?.permissions?.includes(permission));
 }
 
 function AccountMenu({ username, role, onLogout }) {
@@ -111,7 +99,7 @@ function AccountMenu({ username, role, onLogout }) {
   );
 }
 
-function ProductForm({ form, onChange, onSubmit }) {
+function ProductForm({ form, onChange, onSubmit, canManagePricing }) {
   const fields = [
     { key: 'name', required: true, type: 'text' },
     { key: 'sku', required: true, type: 'text' },
@@ -119,8 +107,12 @@ function ProductForm({ form, onChange, onSubmit }) {
     { key: 'supplier', required: false, type: 'text' },
     { key: 'manufacturer', required: false, type: 'text' },
     { key: 'quantity', required: false, type: 'number', min: '0' },
-    { key: 'purchasePrice', required: false, type: 'number', min: '0', step: '0.01' },
-    { key: 'salePrice', required: false, type: 'number', min: '0', step: '0.01' },
+    ...(canManagePricing
+      ? [
+          { key: 'purchasePrice', required: false, type: 'number', min: '0', step: '0.01' },
+          { key: 'salePrice', required: false, type: 'number', min: '0', step: '0.01' },
+        ]
+      : []),
     { key: 'reorderLevel', required: false, type: 'number', min: '0' },
   ];
 
@@ -161,6 +153,8 @@ function ProductsTable({
   onIncreaseVoucherQuantity,
   onSetVoucherQuantity,
   onCheckout,
+  canRefundOrders,
+  onRefundOrder,
   saleFeedback,
   currentOrderId,
   orderHistory,
@@ -342,7 +336,10 @@ function ProductsTable({
                   <summary>
                     <strong>{`Order # ${order.orderId}`}</strong> · ${Number(order.totalAmount).toFixed(2)}
                   </summary>
-                  <p className="muted">{new Date(order.createdAt).toLocaleString()}</p>
+                  <p className="muted">
+                    {new Date(order.createdAt).toLocaleString()}
+                    {order.refundedAt ? ` · Refunded by ${order.refundedBy || 'N/A'} on ${new Date(order.refundedAt).toLocaleString()}` : ''}
+                  </p>
                   <ul>
                     {order.items.map((item) => (
                       <li key={`${order._id}-${item.productId}`}>
@@ -350,6 +347,11 @@ function ProductsTable({
                       </li>
                     ))}
                   </ul>
+                  {canRefundOrders && !order.refundedAt ? (
+                    <button type="button" className="secondary-button" onClick={() => onRefundOrder(order._id)}>
+                      Reverse & Refund
+                    </button>
+                  ) : null}
                 </details>
               ))}
             </div>
@@ -452,11 +454,11 @@ function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVou
 }
 
 function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUser }) {
-  if (!['super', 'supervisor'].includes(normalizeRole(user.role))) {
+  if (normalizeRole(user.role) !== 'super') {
     return null;
   }
 
-  const roleOptions = normalizeRole(user.role) === 'super' ? ['supervisor', SELLER_ROLE] : [SELLER_ROLE];
+  const roleOptions = ['supervisor', SELLER_ROLE];
 
   return (
     <section className="card">
@@ -486,6 +488,26 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
           ))}
         </select>
         <button type="submit">Add user</button>
+        <fieldset>
+          <legend>User rights</legend>
+          {Object.entries(PERMISSION_LABELS).map(([permission, label]) => (
+            <label key={permission} style={{ display: 'block' }}>
+              <input
+                type="checkbox"
+                checked={form.permissions.includes(permission)}
+                onChange={(event) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    permissions: event.target.checked
+                      ? [...prev.permissions, permission]
+                      : prev.permissions.filter((entry) => entry !== permission),
+                  }))
+                }
+              />{' '}
+              {label}
+            </label>
+          ))}
+        </fieldset>
       </form>
 
       <ul className="user-list">
@@ -493,6 +515,7 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
           <li key={entry._id}>
             <span>
               {entry.username} ({getRoleLabel(entry.role)})
+              {entry.permissions?.length ? ` — ${entry.permissions.map((permission) => PERMISSION_LABELS[permission] || permission).join(', ')}` : ''}
             </span>
             {normalizeRole(entry.role) !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
           </li>
@@ -518,8 +541,11 @@ export default function App() {
   const [currentOrderId, setCurrentOrderId] = useState(generateOrderId);
 
   const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
-  const canManageProducts = normalizedRole && ['super', 'supervisor'].includes(normalizedRole);
-  const canSell = normalizedRole ? isSellerRole(normalizedRole) : false;
+  const canManageUsers = normalizedRole === 'super';
+  const canAddProducts = hasPermission(authUser, PERMISSIONS.ADD_PRODUCTS_NO_PRICING) || hasPermission(authUser, PERMISSIONS.MANAGE_PRODUCT_PRICING);
+  const canManagePricing = hasPermission(authUser, PERMISSIONS.MANAGE_PRODUCT_PRICING);
+  const canSell = hasPermission(authUser, PERMISSIONS.SELL_PRODUCTS);
+  const canRefundOrders = hasPermission(authUser, PERMISSIONS.REFUND_COMPLETED_SALES);
 
   const lowStockCount = useMemo(
     () => products.filter((item) => item.quantity <= item.reorderLevel).length,
@@ -560,7 +586,7 @@ export default function App() {
   }
 
   async function loadUsers(currentToken = token, currentUser = authUser) {
-    if (!currentToken || !currentUser || !['super', 'supervisor'].includes(normalizeRole(currentUser.role))) {
+    if (!currentToken || !currentUser || normalizeRole(currentUser.role) !== 'super') {
       setUsers([]);
       return;
     }
@@ -572,7 +598,11 @@ export default function App() {
   }
 
   async function loadOrders(currentToken = token, currentUser = authUser) {
-    if (!currentToken || !currentUser || !isSellerRole(currentUser.role)) {
+    if (
+      !currentToken ||
+      !currentUser ||
+      (!hasPermission(currentUser, PERMISSIONS.SELL_PRODUCTS) && !hasPermission(currentUser, PERMISSIONS.REFUND_COMPLETED_SALES))
+    ) {
       setOrderHistory([]);
       return;
     }
@@ -597,7 +627,7 @@ export default function App() {
     }
 
     const payload = await response.json();
-    const nextUser = { ...payload.user, role: normalizeRole(payload.user.role) };
+    const nextUser = { ...payload.user, role: normalizeRole(payload.user.role), permissions: payload.user.permissions || [] };
 
     setAuthError('');
     setToken(payload.token);
@@ -633,8 +663,12 @@ export default function App() {
         body: JSON.stringify({
           ...productForm,
           quantity: Number(productForm.quantity),
-          purchasePrice: Number(productForm.purchasePrice),
-          salePrice: Number(productForm.salePrice),
+          ...(canManagePricing
+            ? {
+                purchasePrice: Number(productForm.purchasePrice),
+                salePrice: Number(productForm.salePrice),
+              }
+            : {}),
           reorderLevel: Number(productForm.reorderLevel),
         }),
       },
@@ -776,6 +810,28 @@ export default function App() {
     }
   }
 
+  async function refundOrder(orderId) {
+    const response = await apiFetch(
+      `/orders/${orderId}/refund`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'Refund approved by super admin' }),
+      },
+      token
+    );
+
+    if (response.ok) {
+      setAuthError('');
+      setSaleFeedback('Order successfully reversed and refunded.');
+      await loadProducts();
+      await loadOrders();
+      return;
+    }
+
+    const payload = await response.json();
+    setAuthError(payload.message || 'Failed to refund order.');
+  }
+
   async function deleteUser(id) {
     const response = await apiFetch(`/users/${id}`, { method: 'DELETE' }, token);
     if (response.ok) {
@@ -811,15 +867,15 @@ export default function App() {
         </div>
       </header>
 
-      {canManageProducts ? (
-        <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} />
+      {canAddProducts ? (
+        <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} canManagePricing={canManagePricing} />
       ) : null}
       <ProductsTable
         loading={loading}
         products={filteredProducts}
         filters={productFilters}
         onFilterChange={handleProductFilterChange}
-        canManageProducts={canManageProducts}
+        canManageProducts={canAddProducts}
         canSell={canSell}
         onDelete={deleteProduct}
         onUpdate={incrementProduct}
@@ -829,18 +885,22 @@ export default function App() {
         onIncreaseVoucherQuantity={addToVoucher}
         onSetVoucherQuantity={setVoucherQuantity}
         onCheckout={checkoutVoucher}
+        canRefundOrders={canRefundOrders}
+        onRefundOrder={refundOrder}
         saleFeedback={saleFeedback}
         currentOrderId={currentOrderId}
         orderHistory={orderHistory}
       />
-      <UsersPanel
-        user={authUser}
-        users={users}
-        form={userForm}
-        onFormChange={setUserForm}
-        onCreateUser={createUser}
-        onDeleteUser={deleteUser}
-      />
+      {canManageUsers ? (
+        <UsersPanel
+          user={authUser}
+          users={users}
+          form={userForm}
+          onFormChange={setUserForm}
+          onCreateUser={createUser}
+          onDeleteUser={deleteUser}
+        />
+      ) : null}
       {authError ? <p className="error">{authError}</p> : null}
     </main>
   );

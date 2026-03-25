@@ -32,7 +32,23 @@ function requireRoles(...roles) {
   };
 }
 
+function requireAnyPermission(...permissions) {
+  return (req, res, next) => {
+    if (!req.auth) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const userPermissions = Array.isArray(req.auth.permissions) ? req.auth.permissions : [];
+    if (!permissions.some((permission) => userPermissions.includes(permission))) {
+      return res.status(403).json({ message: 'Insufficient permissions' });
+    }
+
+    return next();
+  };
+}
+
 module.exports = {
   requireAuth,
   requireRoles,
+  requireAnyPermission,
 };
