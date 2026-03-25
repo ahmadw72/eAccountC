@@ -361,7 +361,8 @@ function ProductsTable({
 }
 
 function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVoucher, onCheckout, saleFeedback }) {
-  const voucherTotal = voucher.reduce((acc, item) => acc + getSalePrice(item) * item.voucherQuantity, 0);
+  const getSalesPagePrice = (product) => Number(product.salePrice ?? 0);
+  const voucherTotal = voucher.reduce((acc, item) => acc + getSalesPagePrice(item) * item.voucherQuantity, 0);
 
   return (
     <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
@@ -397,7 +398,7 @@ function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVou
                     <p className="muted">Supplier: {product.supplier || 'N/A'} · Manufacturer: {product.manufacturer || 'N/A'}</p>
                   </div>
                   <div className="sales-meta">
-                    <span>${getSalePrice(product).toFixed(2)}</span>
+                    <span>${getSalesPagePrice(product).toFixed(2)}</span>
                     <span>{remainingStock} available</span>
                   </div>
                   <button type="button" disabled={remainingStock <= 0} onClick={() => onAddToVoucher(product)}>
@@ -421,11 +422,11 @@ function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVou
                 <li key={item._id} style={{ borderBottom: '1px solid #eee', padding: '0.5rem 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong>{item.name}</strong>
-                    <span>${(getSalePrice(item) * item.voucherQuantity).toFixed(2)}</span>
+                    <span>${(getSalesPagePrice(item) * item.voucherQuantity).toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9em', color: '#666' }}>
                     <span>
-                      {item.voucherQuantity} x ${getSalePrice(item).toFixed(2)}
+                      {item.voucherQuantity} x ${getSalesPagePrice(item).toFixed(2)}
                     </span>
                     <button type="button" onClick={() => onRemoveFromVoucher(item._id)}>
                       Remove
