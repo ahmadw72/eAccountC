@@ -24,7 +24,8 @@ router.post('/', requireRoles('super', 'supervisor'), async (req, res) => {
 router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
   try {
     const updates = {
-      price: req.body.price,
+      purchasePrice: req.body.purchasePrice,
+      salePrice: req.body.salePrice,
       quantity: req.body.quantity,
       reorderLevel: req.body.reorderLevel,
       category: req.body.category,
