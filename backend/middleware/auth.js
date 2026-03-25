@@ -38,6 +38,10 @@ function requireAnyPermission(...permissions) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
+    if (req.auth.role === 'super') {
+      return next();
+    }
+
     const userPermissions = Array.isArray(req.auth.permissions) ? req.auth.permissions : [];
     if (!permissions.some((permission) => userPermissions.includes(permission))) {
       return res.status(403).json({ message: 'Insufficient permissions' });
