@@ -1,4 +1,6 @@
 export default function SalesPage({ loading, products, onSell, saleFeedback }) {
+  const getSalePrice = (product) => Number(product.salePrice ?? product.price ?? 0);
+
   return (
     <section className="card sales-card">
       <div className="sales-header">
@@ -26,7 +28,7 @@ export default function SalesPage({ loading, products, onSell, saleFeedback }) {
                 <p className="muted">SKU: {product.sku}</p>
               </div>
               <div className="sales-meta">
-                <span>${product.price}</span>
+                <span>${getSalePrice(product).toFixed(2)}</span>
                 <span>{product.quantity} in stock</span>
               </div>
               <button type="button" disabled={product.quantity <= 0} onClick={() => onSell(product._id)}>

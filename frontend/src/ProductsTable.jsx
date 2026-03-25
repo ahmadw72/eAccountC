@@ -1,4 +1,7 @@
 export default function ProductsTable({ loading, products, canManageProducts, canSell, onDelete, onUpdate, onSell, saleFeedback }) {
+  const getSalePrice = (product) => Number(product.salePrice ?? product.price ?? 0);
+  const getPurchasePrice = (product) => Number(product.purchasePrice ?? 0);
+
   return (
     <section className="card">
       <h2>Current Stock</h2>
@@ -28,7 +31,7 @@ export default function ProductsTable({ loading, products, canManageProducts, ca
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontWeight: 'bold' }}>{product.quantity} in stock</div>
-                  <div>${product.price}</div>
+                  <div>Buy: ${getPurchasePrice(product).toFixed(2)} | Sell: ${getSalePrice(product).toFixed(2)}</div>
                 </div>
                 {canSell ? (
                   <button disabled={product.quantity <= 0} onClick={() => onSell(product._id)}>Sell</button>

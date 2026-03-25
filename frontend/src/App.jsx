@@ -13,7 +13,8 @@ const initialProductForm = {
   supplier: '',
   manufacturer: '',
   quantity: 0,
-  price: 0,
+  purchasePrice: 0,
+  salePrice: 0,
   reorderLevel: 5,
 };
 
@@ -44,6 +45,14 @@ function isSellerRole(role) {
 
 function getRoleLabel(role) {
   return isSellerRole(role) ? 'seller' : normalizeRole(role);
+}
+
+function getSalePrice(product) {
+  return Number(product.salePrice ?? product.price ?? 0);
+}
+
+function getPurchasePrice(product) {
+  return Number(product.purchasePrice ?? 0);
 }
 
 function getInitialPage() {
@@ -110,7 +119,8 @@ function ProductForm({ form, onChange, onSubmit }) {
     { key: 'supplier', required: false, type: 'text' },
     { key: 'manufacturer', required: false, type: 'text' },
     { key: 'quantity', required: false, type: 'number', min: '0' },
-    { key: 'price', required: false, type: 'number', min: '0', step: '0.01' },
+    { key: 'purchasePrice', required: false, type: 'number', min: '0', step: '0.01' },
+    { key: 'salePrice', required: false, type: 'number', min: '0', step: '0.01' },
     { key: 'reorderLevel', required: false, type: 'number', min: '0' },
   ];
 
@@ -155,7 +165,7 @@ function ProductsTable({
   currentOrderId,
   orderHistory,
 }) {
-  const voucherTotal = voucher.reduce((acc, item) => acc + item.price * item.voucherQuantity, 0);
+  const voucherTotal = voucher.reduce((acc, item) => acc + getSalePrice(item) * item.voucherQuantity, 0);
 
   const stockList = (
     <section className="card stock-card">
@@ -215,7 +225,7 @@ function ProductsTable({
                 <div className="product-list-actions">
                   <div className="product-metrics">
                     <div className="product-stock">{remainingStock} available</div>
-                    <div>${product.price}</div>
+                    <div>Buy: ${getPurchasePrice(product).toFixed(2)} | Sell: ${getSalePrice(product).toFixed(2)}</div>
                   </div>
                   {canManageProducts ? (
                     <div className="inline-actions">
@@ -272,7 +282,7 @@ function ProductsTable({
                 <div key={item._id} className="order-list-item" role="row">
                   <div className="order-item-details" role="cell">
                     <strong className="order-product-name">{item.name}</strong>
-                    <span className="order-unit-price">${item.price.toFixed(2)}</span>
+                    <span className="order-unit-price">${getSalePrice(item).toFixed(2)}</span>
                   </div>
                   <div className="order-quantity-cell" role="cell">
                     <div className="quantity-stepper" aria-label={`Adjust quantity for ${item.name}`}>
@@ -304,7 +314,7 @@ function ProductsTable({
                       </button>
                     </div>
                   </div>
-                  <span className="order-product-total" role="cell">${(item.price * item.voucherQuantity).toFixed(2)}</span>
+                  <span className="order-product-total" role="cell">${(getSalePrice(item) * item.voucherQuantity).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -351,7 +361,7 @@ function ProductsTable({
 }
 
 function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVoucher, onCheckout, saleFeedback }) {
-  const voucherTotal = voucher.reduce((acc, item) => acc + item.price * item.voucherQuantity, 0);
+  const voucherTotal = voucher.reduce((acc, item) => acc + getSalePrice(item) * item.voucherQuantity, 0);
 
   return (
     <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
@@ -387,7 +397,7 @@ function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVou
                     <p className="muted">Supplier: {product.supplier || 'N/A'} · Manufacturer: {product.manufacturer || 'N/A'}</p>
                   </div>
                   <div className="sales-meta">
-                    <span>${product.price}</span>
+                    <span>${getSalePrice(product).toFixed(2)}</span>
                     <span>{remainingStock} available</span>
                   </div>
                   <button type="button" disabled={remainingStock <= 0} onClick={() => onAddToVoucher(product)}>
@@ -411,11 +421,11 @@ function SalesPage({ loading, products, voucher, onAddToVoucher, onRemoveFromVou
                 <li key={item._id} style={{ borderBottom: '1px solid #eee', padding: '0.5rem 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong>{item.name}</strong>
-                    <span>${(item.price * item.voucherQuantity).toFixed(2)}</span>
+                    <span>${(getSalePrice(item) * item.voucherQuantity).toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9em', color: '#666' }}>
                     <span>
-                      {item.voucherQuantity} x ${item.price}
+                      {item.voucherQuantity} x ${getSalePrice(item).toFixed(2)}
                     </span>
                     <button type="button" onClick={() => onRemoveFromVoucher(item._id)}>
                       Remove
@@ -622,7 +632,8 @@ export default function App() {
         body: JSON.stringify({
           ...productForm,
           quantity: Number(productForm.quantity),
-          price: Number(productForm.price),
+          purchasePrice: Number(productForm.purchasePrice),
+          salePrice: Number(productForm.salePrice),
           reorderLevel: Number(productForm.reorderLevel),
         }),
       },

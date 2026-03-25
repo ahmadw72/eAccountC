@@ -6,7 +6,8 @@ export default function ProductForm({ form, onChange, onSubmit }) {
     { key: 'supplier', required: false, type: 'text' },
     { key: 'manufacturer', required: false, type: 'text' },
     { key: 'quantity', required: false, type: 'number', min: '0' },
-    { key: 'price', required: false, type: 'number', min: '0', step: '0.01' },
+    { key: 'purchasePrice', required: false, type: 'number', min: '0', step: '0.01' },
+    { key: 'salePrice', required: false, type: 'number', min: '0', step: '0.01' },
     { key: 'reorderLevel', required: false, type: 'number', min: '0' },
   ];
 

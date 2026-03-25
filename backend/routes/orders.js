@@ -46,7 +46,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: `Not enough stock for ${product.name}` });
     }
 
-    const lineTotal = Number((product.price * quantity).toFixed(2));
+    const salePrice = Number(product.salePrice ?? product.price ?? 0);
+    const lineTotal = Number((salePrice * quantity).toFixed(2));
     totalAmount = Number((totalAmount + lineTotal).toFixed(2));
 
     product.quantity -= quantity;
@@ -57,7 +58,7 @@ router.post('/', async (req, res) => {
       name: product.name,
       sku: product.sku,
       quantity,
-      unitPrice: product.price,
+      unitPrice: salePrice,
       lineTotal,
     });
   }
