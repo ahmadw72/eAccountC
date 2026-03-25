@@ -79,6 +79,10 @@ function apiFetch(path, options = {}, token) {
 }
 
 function hasPermission(user, permission) {
+  if (normalizeRole(user?.role) === 'super') {
+    return true;
+  }
+
   return Boolean(user?.permissions?.includes(permission));
 }
 
