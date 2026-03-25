@@ -1,5 +1,5 @@
 export default function SalesPage({ loading, products, onSell, saleFeedback }) {
-  const getSalePrice = (product) => Number(product.salePrice ?? product.price ?? 0);
+  const getSalePrice = (product) => Number(product.salePrice ?? 0);
 
   return (
     <section className="card sales-card">
