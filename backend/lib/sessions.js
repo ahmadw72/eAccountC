@@ -1,11 +1,17 @@
 const crypto = require('crypto');
 const { normalizeRole } = require('./roles');
+const { normalizePermissions } = require('./permissions');
 
 const sessions = new Map();
 
 function createSession(user) {
   const token = crypto.randomBytes(24).toString('hex');
-  sessions.set(token, { id: user._id.toString(), username: user.username, role: normalizeRole(user.role) });
+  sessions.set(token, {
+    id: user._id.toString(),
+    username: user.username,
+    role: normalizeRole(user.role),
+    permissions: normalizePermissions(user.permissions),
+  });
   return token;
 }
 

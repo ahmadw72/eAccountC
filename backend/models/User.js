@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const { SELLER_ROLE, LEGACY_SELLER_ROLE, normalizeRole } = require('../lib/roles');
+const { ALL_PERMISSIONS, normalizePermissions } = require('../lib/permissions');
 
 const allowedRoles = ['super', 'supervisor', SELLER_ROLE, LEGACY_SELLER_ROLE];
 
@@ -34,6 +35,11 @@ const userSchema = new mongoose.Schema(
       enum: allowedRoles,
       required: true,
     },
+    permissions: {
+      type: [String],
+      enum: ALL_PERMISSIONS,
+      default: [],
+    },
   },
   { timestamps: true }
 );
@@ -44,9 +50,14 @@ userSchema.methods.comparePassword = function comparePassword(password) {
   return verifyPassword(password, this.passwordHash);
 };
 
-userSchema.statics.createWithPassword = async function createWithPassword({ username, password, role }) {
+userSchema.statics.createWithPassword = async function createWithPassword({ username, password, role, permissions = [] }) {
   const passwordHash = hashPassword(password);
-  return this.create({ username: username.toLowerCase(), passwordHash, role: normalizeRole(role) });
+  return this.create({
+    username: username.toLowerCase(),
+    passwordHash,
+    role: normalizeRole(role),
+    permissions: normalizePermissions(permissions),
+  });
 };
 
 module.exports = mongoose.model('User', userSchema);

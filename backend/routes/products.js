@@ -1,7 +1,7 @@
 const express = require('express');
 const Product = require('../models/Product');
-const { requireAuth, requireRoles } = require('../middleware/auth');
-const { SELLER_ROLE } = require('../lib/roles');
+const { requireAuth, requireAnyPermission } = require('../middleware/auth');
+const { PERMISSIONS } = require('../lib/permissions');
 
 const router = express.Router();
 
@@ -12,17 +12,32 @@ router.get('/', async (_req, res) => {
   res.json(products);
 });
 
-router.post('/', requireRoles('super', 'supervisor'), async (req, res) => {
+router.post(
+  '/',
+  requireAnyPermission(PERMISSIONS.ADD_PRODUCTS_NO_PRICING, PERMISSIONS.MANAGE_PRODUCT_PRICING),
+  async (req, res) => {
   try {
-    const product = await Product.create(req.body);
+    const canManageProductPricing = (req.auth.permissions || []).includes(PERMISSIONS.MANAGE_PRODUCT_PRICING);
+    const payload = { ...req.body };
+
+    if (!canManageProductPricing) {
+      payload.purchasePrice = 0;
+      payload.salePrice = 0;
+    }
+
+    const product = await Product.create(payload);
     res.status(201).json(product);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
+router.patch(
+  '/:id',
+  requireAnyPermission(PERMISSIONS.ADD_PRODUCTS_NO_PRICING, PERMISSIONS.MANAGE_PRODUCT_PRICING),
+  async (req, res) => {
   try {
+    const canManageProductPricing = (req.auth.permissions || []).includes(PERMISSIONS.MANAGE_PRODUCT_PRICING);
     const updates = {
       purchasePrice: req.body.purchasePrice,
       salePrice: req.body.salePrice,
@@ -41,6 +56,11 @@ router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
       }
     });
 
+    if (!canManageProductPricing) {
+      delete updates.purchasePrice;
+      delete updates.salePrice;
+    }
+
     const product = await Product.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
@@ -56,7 +76,7 @@ router.patch('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
   }
 });
 
-router.post('/:id/sell', requireRoles(SELLER_ROLE), async (req, res) => {
+router.post('/:id/sell', requireAnyPermission(PERMISSIONS.SELL_PRODUCTS), async (req, res) => {
   const quantity = Number(req.body.quantity || 1);
 
   if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -79,7 +99,7 @@ router.post('/:id/sell', requireRoles(SELLER_ROLE), async (req, res) => {
   return res.json(product);
 });
 
-router.delete('/:id', requireRoles('super', 'supervisor'), async (req, res) => {
+router.delete('/:id', requireAnyPermission(PERMISSIONS.ADD_PRODUCTS_NO_PRICING, PERMISSIONS.MANAGE_PRODUCT_PRICING), async (req, res) => {
   const product = await Product.findByIdAndDelete(req.params.id);
 
   if (!product) {

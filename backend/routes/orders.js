@@ -1,23 +1,23 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-const { requireAuth, requireRoles } = require('../middleware/auth');
-const { SELLER_ROLE } = require('../lib/roles');
+const { requireAuth, requireAnyPermission } = require('../middleware/auth');
+const { PERMISSIONS } = require('../lib/permissions');
 
 const router = express.Router();
 
-router.use(requireAuth, requireRoles(SELLER_ROLE));
+router.use(requireAuth);
 
 function isValidOrderId(value) {
   return typeof value === 'string' && /^[A-Za-z0-9]{12}$/.test(value);
 }
 
-router.get('/', async (_req, res) => {
+router.get('/', requireAnyPermission(PERMISSIONS.SELL_PRODUCTS), async (_req, res) => {
   const orders = await Order.find().sort({ createdAt: -1 });
   return res.json(orders);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAnyPermission(PERMISSIONS.SELL_PRODUCTS), async (req, res) => {
   const { orderId, items } = req.body;
 
   if (!isValidOrderId(orderId)) {
@@ -79,6 +79,29 @@ router.post('/', async (req, res) => {
 
     return res.status(400).json({ message: error.message });
   }
+});
+
+router.post('/:id/refund', requireAnyPermission(PERMISSIONS.REFUND_COMPLETED_SALES), async (req, res) => {
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ message: 'Order not found' });
+  }
+
+  if (order.refundedAt) {
+    return res.status(400).json({ message: 'Order has already been refunded' });
+  }
+
+  for (const item of order.items) {
+    await Product.findByIdAndUpdate(item.productId, { $inc: { quantity: item.quantity } });
+  }
+
+  order.refundedAt = new Date();
+  order.refundedBy = req.auth.username;
+  order.refundReason = (req.body?.reason || '').toString().trim();
+  await order.save();
+
+  return res.json(order);
 });
 
 module.exports = router;
