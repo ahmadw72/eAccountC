@@ -225,7 +225,7 @@ function ProductsTable({
                 <div className="product-list-actions">
                   <div className="product-metrics">
                     <div className="product-stock">{remainingStock} available</div>
-                    <div>Buy: ${getPurchasePrice(product).toFixed(2)} | Sell: ${getSalePrice(product).toFixed(2)}</div>
+                    <div>Sell: ${getSalePrice(product).toFixed(2)}</div>
                   </div>
                   {canManageProducts ? (
                     <div className="inline-actions">
