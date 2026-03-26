@@ -30,6 +30,7 @@ const initialUserForm = {
   cnic: '',
   residentialAddress: '',
   role: SELLER_ROLE,
+  permissions: [],
 };
 
 const initialProductFilters = {
@@ -463,6 +464,24 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
     return null;
   }
 
+  const permissionOptions = [
+    { key: PERMISSIONS.SELL_PRODUCTS, label: 'Sell products' },
+    { key: PERMISSIONS.ADD_PRODUCTS_NO_PRICING, label: 'Add products (no pricing)' },
+    { key: PERMISSIONS.MANAGE_PRODUCT_PRICING, label: 'Manage product pricing' },
+    { key: PERMISSIONS.REFUND_COMPLETED_SALES, label: 'Refund completed sales' },
+  ];
+
+  function togglePermission(permission) {
+    onFormChange((prev) => {
+      const currentPermissions = Array.isArray(prev.permissions) ? prev.permissions : [];
+      const nextPermissions = currentPermissions.includes(permission)
+        ? currentPermissions.filter((entry) => entry !== permission)
+        : [...currentPermissions, permission];
+
+      return { ...prev, permissions: nextPermissions };
+    });
+  }
+
   return (
     <section className="card">
       <h2>Manage Users</h2>
@@ -504,6 +523,19 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
           value={form.residentialAddress}
           onChange={(event) => onFormChange((prev) => ({ ...prev, residentialAddress: event.target.value }))}
         />
+        <fieldset>
+          <legend>User rights</legend>
+          {permissionOptions.map((permissionOption) => (
+            <label key={permissionOption.key} style={{ display: 'block' }}>
+              <input
+                type="checkbox"
+                checked={(form.permissions || []).includes(permissionOption.key)}
+                onChange={() => togglePermission(permissionOption.key)}
+              />
+              {` ${permissionOption.label}`}
+            </label>
+          ))}
+        </fieldset>
         <button type="submit">Add</button>
       </form>
 
@@ -512,6 +544,7 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
           <li key={entry._id}>
             <span>
               {`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.username} ({entry.gmail || entry.username})
+              {(entry.permissions || []).length ? ` — Rights: ${(entry.permissions || []).join(', ')}` : ''}
             </span>
             {normalizeRole(entry.role) !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
           </li>
@@ -805,6 +838,7 @@ export default function App() {
         body: JSON.stringify({
           ...userForm,
           role: SELLER_ROLE,
+          permissions: userForm.permissions || [],
         }),
       },
       token
