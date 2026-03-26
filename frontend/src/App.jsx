@@ -519,6 +519,7 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
         />
         <input
           required
+          className="full-line-field"
           placeholder="Residential Address"
           value={form.residentialAddress}
           onChange={(event) => onFormChange((prev) => ({ ...prev, residentialAddress: event.target.value }))}
@@ -536,7 +537,9 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
             </label>
           ))}
         </fieldset>
-        <button type="submit">Add</button>
+        <button className="normal-size-button" type="submit">
+          Add
+        </button>
       </form>
 
       <ul className="user-list">
