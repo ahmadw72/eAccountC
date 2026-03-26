@@ -34,7 +34,9 @@ export default function UsersPanel({ user, users, form, onFormChange, onCreateUs
             </option>
           ))}
         </select>
-        <button type="submit">Add user</button>
+        <button type="submit" className="full-line-field normal-size-button">
+          Add user
+        </button>
       </form>
 
       <ul className="user-list">
