@@ -10,13 +10,6 @@ const PERMISSIONS = {
   REFUND_COMPLETED_SALES: 'refund_completed_sales',
 };
 
-const PERMISSION_LABELS = {
-  [PERMISSIONS.SELL_PRODUCTS]: 'Right to sell products (Sales page access only)',
-  [PERMISSIONS.ADD_PRODUCTS_NO_PRICING]: 'Right to add products without sale/buy prices',
-  [PERMISSIONS.MANAGE_PRODUCT_PRICING]: 'Right to add products with sale/buy prices and update existing pricing',
-  [PERMISSIONS.REFUND_COMPLETED_SALES]: 'Right to reverse completed sales orders with refund',
-};
-
 const initialProductForm = {
   name: '',
   sku: '',
@@ -30,10 +23,13 @@ const initialProductForm = {
 };
 
 const initialUserForm = {
-  username: '',
-  password: '',
+  firstName: '',
+  lastName: '',
+  gmail: '',
+  phoneNumber: '',
+  cnic: '',
+  residentialAddress: '',
   role: SELLER_ROLE,
-  permissions: [],
 };
 
 const initialProductFilters = {
@@ -467,64 +463,55 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
     return null;
   }
 
-  const roleOptions = ['supervisor', SELLER_ROLE];
-
   return (
     <section className="card">
       <h2>Manage Users</h2>
       <form className="grid" onSubmit={onCreateUser}>
         <input
           required
-          placeholder="username"
-          value={form.username}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, username: event.target.value }))}
+          placeholder="User First Name"
+          value={form.firstName}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, firstName: event.target.value }))}
         />
         <input
           required
-          type="password"
-          placeholder="password"
-          value={form.password}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, password: event.target.value }))}
+          placeholder="User Last Name"
+          value={form.lastName}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, lastName: event.target.value }))}
         />
-        <select
-          value={form.role}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, role: event.target.value }))}
-        >
-          {roleOptions.map((role) => (
-            <option key={role} value={role}>
-              {getRoleLabel(role)}
-            </option>
-          ))}
-        </select>
-        <button type="submit">Add user</button>
-        <fieldset>
-          <legend>User rights</legend>
-          {Object.entries(PERMISSION_LABELS).map(([permission, label]) => (
-            <label key={permission} style={{ display: 'block' }}>
-              <input
-                type="checkbox"
-                checked={form.permissions.includes(permission)}
-                onChange={(event) =>
-                  onFormChange((prev) => ({
-                    ...prev,
-                    permissions: event.target.checked
-                      ? [...prev.permissions, permission]
-                      : prev.permissions.filter((entry) => entry !== permission),
-                  }))
-                }
-              />{' '}
-              {label}
-            </label>
-          ))}
-        </fieldset>
+        <input
+          required
+          type="email"
+          placeholder="Gmail Address"
+          value={form.gmail}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, gmail: event.target.value }))}
+        />
+        <input
+          required
+          placeholder="Phone Number"
+          value={form.phoneNumber}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+        />
+        <input
+          required
+          placeholder="CNIC"
+          value={form.cnic}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, cnic: event.target.value }))}
+        />
+        <input
+          required
+          placeholder="Residential Address"
+          value={form.residentialAddress}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, residentialAddress: event.target.value }))}
+        />
+        <button type="submit">Add</button>
       </form>
 
       <ul className="user-list">
         {users.map((entry) => (
           <li key={entry._id}>
             <span>
-              {entry.username} ({getRoleLabel(entry.role)})
-              {entry.permissions?.length ? ` — ${entry.permissions.map((permission) => PERMISSION_LABELS[permission] || permission).join(', ')}` : ''}
+              {`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.username} ({entry.gmail || entry.username})
             </span>
             {normalizeRole(entry.role) !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
           </li>
@@ -815,7 +802,10 @@ export default function App() {
       '/users',
       {
         method: 'POST',
-        body: JSON.stringify(userForm),
+        body: JSON.stringify({
+          ...userForm,
+          role: SELLER_ROLE,
+        }),
       },
       token
     );

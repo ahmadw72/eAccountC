@@ -40,6 +40,37 @@ const userSchema = new mongoose.Schema(
       enum: ALL_PERMISSIONS,
       default: [],
     },
+    firstName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    lastName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    gmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    cnic: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    residentialAddress: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );
@@ -50,13 +81,30 @@ userSchema.methods.comparePassword = function comparePassword(password) {
   return verifyPassword(password, this.passwordHash);
 };
 
-userSchema.statics.createWithPassword = async function createWithPassword({ username, password, role, permissions = [] }) {
+userSchema.statics.createWithPassword = async function createWithPassword({
+  username,
+  password,
+  role,
+  permissions = [],
+  firstName = '',
+  lastName = '',
+  gmail = '',
+  phoneNumber = '',
+  cnic = '',
+  residentialAddress = '',
+}) {
   const passwordHash = hashPassword(password);
   return this.create({
     username: username.toLowerCase(),
     passwordHash,
     role: normalizeRole(role),
     permissions: normalizePermissions(permissions),
+    firstName,
+    lastName,
+    gmail: gmail.toLowerCase(),
+    phoneNumber,
+    cnic,
+    residentialAddress,
   });
 };
 
