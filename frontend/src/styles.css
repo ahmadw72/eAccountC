@@ -36,6 +36,15 @@ body {
   gap: 0.5rem;
 }
 
+.full-line-field {
+  grid-column: 1 / -1;
+}
+
+.normal-size-button {
+  justify-self: start;
+  width: auto;
+}
+
 input,
 button,
 select {
