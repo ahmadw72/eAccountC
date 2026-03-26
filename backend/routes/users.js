@@ -18,9 +18,29 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { username, password, role, permissions = [] } = req.body;
+  const {
+    username,
+    password,
+    role = SELLER_ROLE,
+    permissions = [],
+    firstName,
+    lastName,
+    gmail,
+    phoneNumber,
+    cnic,
+    residentialAddress,
+  } = req.body;
 
-  if (!username || !password || !role) {
+  const derivedUsername = (username || gmail || '').trim().toLowerCase();
+  const derivedPassword = (password || cnic || '').trim();
+
+  if (!firstName || !lastName || !gmail || !phoneNumber || !cnic || !residentialAddress) {
+    return res.status(400).json({
+      message: 'First name, last name, gmail, phone number, CNIC, and residential address are required',
+    });
+  }
+
+  if (!derivedUsername || !derivedPassword || !role) {
     return res.status(400).json({ message: 'Username, password and role are required' });
   }
 
@@ -45,16 +65,28 @@ router.post('/', async (req, res) => {
 
   try {
     const user = await User.createWithPassword({
-      username,
-      password,
+      username: derivedUsername,
+      password: derivedPassword,
       role: normalizedRole,
       permissions: normalizedPermissions,
+      firstName,
+      lastName,
+      gmail,
+      phoneNumber,
+      cnic,
+      residentialAddress,
     });
     return res.status(201).json({
       id: user._id,
       username: user.username,
       role: normalizeRole(user.role),
       permissions: user.permissions || [],
+      firstName: user.firstName,
+      lastName: user.lastName,
+      gmail: user.gmail,
+      phoneNumber: user.phoneNumber,
+      cnic: user.cnic,
+      residentialAddress: user.residentialAddress,
     });
   } catch (error) {
     return res.status(400).json({ message: error.message });
