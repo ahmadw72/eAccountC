@@ -42,6 +42,11 @@ const initialProductFilters = {
   manufacturer: '',
 };
 
+const DASHBOARD_ROUTES = {
+  INVENTORY: 'inventory',
+  USERS: 'users',
+};
+
 function generateOrderId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -543,6 +548,7 @@ export default function App() {
   const [productFilters, setProductFilters] = useState(initialProductFilters);
   const [orderHistory, setOrderHistory] = useState([]);
   const [currentOrderId, setCurrentOrderId] = useState(generateOrderId);
+  const [dashboardRoute, setDashboardRoute] = useState(DASHBOARD_ROUTES.INVENTORY);
 
   const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
   const canManageUsers = normalizedRole === 'super';
@@ -550,6 +556,12 @@ export default function App() {
   const canManagePricing = hasPermission(authUser, PERMISSIONS.MANAGE_PRODUCT_PRICING);
   const canSell = hasPermission(authUser, PERMISSIONS.SELL_PRODUCTS);
   const canRefundOrders = hasPermission(authUser, PERMISSIONS.REFUND_COMPLETED_SALES);
+
+  useEffect(() => {
+    if (!canManageUsers && dashboardRoute === DASHBOARD_ROUTES.USERS) {
+      setDashboardRoute(DASHBOARD_ROUTES.INVENTORY);
+    }
+  }, [canManageUsers, dashboardRoute]);
 
   const lowStockCount = useMemo(
     () => products.filter((item) => item.quantity <= item.reorderLevel).length,
@@ -652,6 +664,7 @@ export default function App() {
     setProductFilters(initialProductFilters);
     setOrderHistory([]);
     setCurrentOrderId(generateOrderId());
+    setDashboardRoute(DASHBOARD_ROUTES.INVENTORY);
   }
 
   function handleProductFilterChange(key, value) {
@@ -870,32 +883,54 @@ export default function App() {
           </div>
         </div>
       </header>
+      <div className="page-tabs">
+        <button
+          type="button"
+          className={dashboardRoute === DASHBOARD_ROUTES.INVENTORY ? 'secondary-button active-tab' : 'secondary-button'}
+          onClick={() => setDashboardRoute(DASHBOARD_ROUTES.INVENTORY)}
+        >
+          Inventory
+        </button>
+        {canManageUsers ? (
+          <button
+            type="button"
+            className={dashboardRoute === DASHBOARD_ROUTES.USERS ? 'secondary-button active-tab' : 'secondary-button'}
+            onClick={() => setDashboardRoute(DASHBOARD_ROUTES.USERS)}
+          >
+            User Management
+          </button>
+        ) : null}
+      </div>
 
-      {canAddProducts ? (
-        <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} canManagePricing={canManagePricing} />
+      {dashboardRoute === DASHBOARD_ROUTES.INVENTORY ? (
+        <>
+          {canAddProducts ? (
+            <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} canManagePricing={canManagePricing} />
+          ) : null}
+          <ProductsTable
+            loading={loading}
+            products={filteredProducts}
+            filters={productFilters}
+            onFilterChange={handleProductFilterChange}
+            canManageProducts={canAddProducts}
+            canSell={canSell}
+            onDelete={deleteProduct}
+            onUpdate={incrementProduct}
+            voucher={voucher}
+            onAddToVoucher={addToVoucher}
+            onDecreaseVoucherQuantity={decreaseVoucherQuantity}
+            onIncreaseVoucherQuantity={addToVoucher}
+            onSetVoucherQuantity={setVoucherQuantity}
+            onCheckout={checkoutVoucher}
+            canRefundOrders={canRefundOrders}
+            onRefundOrder={refundOrder}
+            saleFeedback={saleFeedback}
+            currentOrderId={currentOrderId}
+            orderHistory={orderHistory}
+          />
+        </>
       ) : null}
-      <ProductsTable
-        loading={loading}
-        products={filteredProducts}
-        filters={productFilters}
-        onFilterChange={handleProductFilterChange}
-        canManageProducts={canAddProducts}
-        canSell={canSell}
-        onDelete={deleteProduct}
-        onUpdate={incrementProduct}
-        voucher={voucher}
-        onAddToVoucher={addToVoucher}
-        onDecreaseVoucherQuantity={decreaseVoucherQuantity}
-        onIncreaseVoucherQuantity={addToVoucher}
-        onSetVoucherQuantity={setVoucherQuantity}
-        onCheckout={checkoutVoucher}
-        canRefundOrders={canRefundOrders}
-        onRefundOrder={refundOrder}
-        saleFeedback={saleFeedback}
-        currentOrderId={currentOrderId}
-        orderHistory={orderHistory}
-      />
-      {canManageUsers ? (
+      {dashboardRoute === DASHBOARD_ROUTES.USERS && canManageUsers ? (
         <UsersPanel
           user={authUser}
           users={users}
