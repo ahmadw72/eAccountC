@@ -25,6 +25,8 @@ const initialProductForm = {
 const initialUserForm = {
   firstName: '',
   lastName: '',
+  username: '',
+  password: '',
   gmail: '',
   phoneNumber: '',
   cnic: '',
@@ -497,6 +499,19 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
           placeholder="User Last Name"
           value={form.lastName}
           onChange={(event) => onFormChange((prev) => ({ ...prev, lastName: event.target.value }))}
+        />
+        <input
+          required
+          placeholder="Username"
+          value={form.username}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, username: event.target.value }))}
+        />
+        <input
+          required
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={(event) => onFormChange((prev) => ({ ...prev, password: event.target.value }))}
         />
         <input
           required
