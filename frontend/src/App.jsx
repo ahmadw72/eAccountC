@@ -524,6 +524,7 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
           value={form.residentialAddress}
           onChange={(event) => onFormChange((prev) => ({ ...prev, residentialAddress: event.target.value }))}
         />
+      
         <fieldset>
           <legend>User rights</legend>
           {permissionOptions.map((permissionOption) => (
@@ -537,9 +538,13 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
             </label>
           ))}
         </fieldset>
-        <button className="normal-size-button" type="submit">
-          Add
-        </button>
+        
+        <div>
+          <button /*className="normal-size-button"*/ type="submit">
+            Add User
+          </button>
+        </div>
+      
       </form>
 
       <ul className="user-list">

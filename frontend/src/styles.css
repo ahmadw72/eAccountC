@@ -32,7 +32,8 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+ /* grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));*/
+  grid-template-rows: repeat(auto-fit,auto-fit,auto-fit, auto-fit);
   gap: 0.5rem;
 }
 
@@ -41,8 +42,9 @@ body {
 }
 
 .normal-size-button {
-  justify-self: start;
+  /*justify-self: start;*/
   width: auto;
+  /*grid-template-rows: 100px 20px;*/
 }
 
 input,
