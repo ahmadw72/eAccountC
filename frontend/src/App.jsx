@@ -42,7 +42,10 @@ const initialProductFilters = {
 };
 
 const DASHBOARD_ROUTES = {
-  INVENTORY: 'inventory',
+  ADD_PRODUCTS: 'add_products',
+  MANAGE_PRICING: 'manage_pricing',
+  SELL_PRODUCTS: 'sell_products',
+  REFUND_SALES: 'refund_sales',
   USERS: 'users',
 };
 
@@ -577,6 +580,44 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
   );
 }
 
+function RefundsPanel({ orderHistory, canRefundOrders, onRefundOrder }) {
+  return (
+    <section className="card">
+      <h2>Refund Completed Sales</h2>
+      <p className="muted">Review previously completed orders and reverse them when needed.</p>
+      {orderHistory.length === 0 ? (
+        <p className="muted">No saved orders yet.</p>
+      ) : (
+        <div className="order-history-list">
+          {orderHistory.map((order) => (
+            <details key={order._id} className="order-history-item">
+              <summary>
+                <strong>{`Order # ${order.orderId}`}</strong> · ${Number(order.totalAmount).toFixed(2)}
+              </summary>
+              <p className="muted">
+                {new Date(order.createdAt).toLocaleString()}
+                {order.refundedAt ? ` · Refunded by ${order.refundedBy || 'N/A'} on ${new Date(order.refundedAt).toLocaleString()}` : ''}
+              </p>
+              <ul>
+                {order.items.map((item) => (
+                  <li key={`${order._id}-${item.productId}`}>
+                    {item.name} ({item.quantity} × ${Number(item.unitPrice).toFixed(2)})
+                  </li>
+                ))}
+              </ul>
+              {canRefundOrders && !order.refundedAt ? (
+                <button type="button" className="secondary-button" onClick={() => onRefundOrder(order._id)}>
+                  Reverse & Refund
+                </button>
+              ) : null}
+            </details>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function App() {
   const [token, setToken] = useState('');
   const [authUser, setAuthUser] = useState(null);
@@ -591,7 +632,7 @@ export default function App() {
   const [productFilters, setProductFilters] = useState(initialProductFilters);
   const [orderHistory, setOrderHistory] = useState([]);
   const [currentOrderId, setCurrentOrderId] = useState(generateOrderId);
-  const [dashboardRoute, setDashboardRoute] = useState(DASHBOARD_ROUTES.INVENTORY);
+  const [dashboardRoute, setDashboardRoute] = useState(DASHBOARD_ROUTES.SELL_PRODUCTS);
 
   const normalizedRole = authUser ? normalizeRole(authUser.role) : null;
   const canManageUsers = normalizedRole === 'super';
@@ -600,11 +641,37 @@ export default function App() {
   const canSell = hasPermission(authUser, PERMISSIONS.SELL_PRODUCTS);
   const canRefundOrders = hasPermission(authUser, PERMISSIONS.REFUND_COMPLETED_SALES);
 
-  useEffect(() => {
-    if (!canManageUsers && dashboardRoute === DASHBOARD_ROUTES.USERS) {
-      setDashboardRoute(DASHBOARD_ROUTES.INVENTORY);
+  const dashboardTabs = useMemo(() => {
+    const tabs = [];
+
+    if (canAddProducts) {
+      tabs.push({ key: DASHBOARD_ROUTES.ADD_PRODUCTS, label: 'Add Products' });
     }
-  }, [canManageUsers, dashboardRoute]);
+    if (canManagePricing) {
+      tabs.push({ key: DASHBOARD_ROUTES.MANAGE_PRICING, label: 'Manage Pricing' });
+    }
+    if (canSell) {
+      tabs.push({ key: DASHBOARD_ROUTES.SELL_PRODUCTS, label: 'Sell Products' });
+    }
+    if (canRefundOrders) {
+      tabs.push({ key: DASHBOARD_ROUTES.REFUND_SALES, label: 'Refund Sales' });
+    }
+    if (canManageUsers) {
+      tabs.push({ key: DASHBOARD_ROUTES.USERS, label: 'User Management' });
+    }
+
+    return tabs;
+  }, [canAddProducts, canManagePricing, canSell, canRefundOrders, canManageUsers]);
+
+  useEffect(() => {
+    if (dashboardTabs.length === 0) {
+      return;
+    }
+
+    if (!dashboardTabs.some((tab) => tab.key === dashboardRoute)) {
+      setDashboardRoute(dashboardTabs[0].key);
+    }
+  }, [dashboardRoute, dashboardTabs]);
 
   const lowStockCount = useMemo(
     () => products.filter((item) => item.quantity <= item.reorderLevel).length,
@@ -707,7 +774,7 @@ export default function App() {
     setProductFilters(initialProductFilters);
     setOrderHistory([]);
     setCurrentOrderId(generateOrderId());
-    setDashboardRoute(DASHBOARD_ROUTES.INVENTORY);
+    setDashboardRoute(DASHBOARD_ROUTES.SELL_PRODUCTS);
   }
 
   function handleProductFilterChange(key, value) {
@@ -931,29 +998,72 @@ export default function App() {
         </div>
       </header>
       <div className="page-tabs">
-        <button
-          type="button"
-          className={dashboardRoute === DASHBOARD_ROUTES.INVENTORY ? 'secondary-button active-tab' : 'secondary-button'}
-          onClick={() => setDashboardRoute(DASHBOARD_ROUTES.INVENTORY)}
-        >
-          Inventory
-        </button>
-        {canManageUsers ? (
+        {dashboardTabs.map((tab) => (
           <button
+            key={tab.key}
             type="button"
-            className={dashboardRoute === DASHBOARD_ROUTES.USERS ? 'secondary-button active-tab' : 'secondary-button'}
-            onClick={() => setDashboardRoute(DASHBOARD_ROUTES.USERS)}
+            className={dashboardRoute === tab.key ? 'secondary-button active-tab' : 'secondary-button'}
+            onClick={() => setDashboardRoute(tab.key)}
           >
-            User Management
+            {tab.label}
           </button>
-        ) : null}
+        ))}
       </div>
 
-      {dashboardRoute === DASHBOARD_ROUTES.INVENTORY ? (
+      {dashboardRoute === DASHBOARD_ROUTES.ADD_PRODUCTS && canAddProducts ? (
         <>
-          {canAddProducts ? (
-            <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} canManagePricing={canManagePricing} />
-          ) : null}
+          <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} canManagePricing={false} />
+          <ProductsTable
+            loading={loading}
+            products={products}
+            filters={productFilters}
+            onFilterChange={handleProductFilterChange}
+            canManageProducts={canAddProducts}
+            canSell={false}
+            onDelete={deleteProduct}
+            onUpdate={incrementProduct}
+            voucher={voucher}
+            onAddToVoucher={addToVoucher}
+            onDecreaseVoucherQuantity={decreaseVoucherQuantity}
+            onIncreaseVoucherQuantity={addToVoucher}
+            onSetVoucherQuantity={setVoucherQuantity}
+            onCheckout={checkoutVoucher}
+            canRefundOrders={false}
+            onRefundOrder={refundOrder}
+            saleFeedback={saleFeedback}
+            currentOrderId={currentOrderId}
+            orderHistory={orderHistory}
+          />
+        </>
+      ) : null}
+      {dashboardRoute === DASHBOARD_ROUTES.MANAGE_PRICING && canManagePricing ? (
+        <>
+          <ProductForm form={productForm} onChange={setProductForm} onSubmit={createProduct} canManagePricing />
+          <ProductsTable
+            loading={loading}
+            products={products}
+            filters={productFilters}
+            onFilterChange={handleProductFilterChange}
+            canManageProducts={canAddProducts}
+            canSell={false}
+            onDelete={deleteProduct}
+            onUpdate={incrementProduct}
+            voucher={voucher}
+            onAddToVoucher={addToVoucher}
+            onDecreaseVoucherQuantity={decreaseVoucherQuantity}
+            onIncreaseVoucherQuantity={addToVoucher}
+            onSetVoucherQuantity={setVoucherQuantity}
+            onCheckout={checkoutVoucher}
+            canRefundOrders={false}
+            onRefundOrder={refundOrder}
+            saleFeedback={saleFeedback}
+            currentOrderId={currentOrderId}
+            orderHistory={orderHistory}
+          />
+        </>
+      ) : null}
+      {dashboardRoute === DASHBOARD_ROUTES.SELL_PRODUCTS && canSell ? (
+        <>
           <ProductsTable
             loading={loading}
             products={filteredProducts}
@@ -969,13 +1079,16 @@ export default function App() {
             onIncreaseVoucherQuantity={addToVoucher}
             onSetVoucherQuantity={setVoucherQuantity}
             onCheckout={checkoutVoucher}
-            canRefundOrders={canRefundOrders}
+            canRefundOrders={false}
             onRefundOrder={refundOrder}
             saleFeedback={saleFeedback}
             currentOrderId={currentOrderId}
             orderHistory={orderHistory}
           />
         </>
+      ) : null}
+      {dashboardRoute === DASHBOARD_ROUTES.REFUND_SALES && canRefundOrders ? (
+        <RefundsPanel orderHistory={orderHistory} canRefundOrders={canRefundOrders} onRefundOrder={refundOrder} />
       ) : null}
       {dashboardRoute === DASHBOARD_ROUTES.USERS && canManageUsers ? (
         <UsersPanel
