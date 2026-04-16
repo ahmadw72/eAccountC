@@ -49,6 +49,11 @@ const DASHBOARD_ROUTES = {
   USERS: 'users',
 };
 
+const USER_MANAGEMENT_TABS = {
+  CREATE_USER: 'create_user',
+  EXISTING_USERS: 'existing_users',
+};
+
 function generateOrderId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -469,6 +474,8 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
     return null;
   }
 
+  const [activeUserTab, setActiveUserTab] = useState(USER_MANAGEMENT_TABS.CREATE_USER);
+
   const permissionOptions = [
     { key: PERMISSIONS.SELL_PRODUCTS, label: 'Sell products' },
     { key: PERMISSIONS.ADD_PRODUCTS_NO_PRICING, label: 'Add products (no pricing)' },
@@ -490,92 +497,108 @@ function UsersPanel({ user, users, form, onFormChange, onCreateUser, onDeleteUse
   return (
     <section className="card">
       <h2>Manage Users</h2>
-      <form className="grid" onSubmit={onCreateUser}>
-        <input
-          required
-          placeholder="User First Name"
-          value={form.firstName}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, firstName: event.target.value }))}
-        />
-        <input
-          required
-          placeholder="User Last Name"
-          value={form.lastName}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, lastName: event.target.value }))}
-        />
-        <input
-          required
-          placeholder="Username"
-          value={form.username}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, username: event.target.value }))}
-        />
-        <input
-          required
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, password: event.target.value }))}
-        />
-        <input
-          required
-          type="email"
-          placeholder="Gmail Address"
-          value={form.gmail}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, gmail: event.target.value }))}
-        />
-        <input
-          required
-          placeholder="Phone Number"
-          value={form.phoneNumber}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, phoneNumber: event.target.value }))}
-        />
-        <input
-          required
-          placeholder="CNIC"
-          value={form.cnic}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, cnic: event.target.value }))}
-        />
-        <input
-          required
-          className="full-line-field"
-          placeholder="Residential Address"
-          value={form.residentialAddress}
-          onChange={(event) => onFormChange((prev) => ({ ...prev, residentialAddress: event.target.value }))}
-        />
-      
-        <fieldset>
-          <legend>User rights</legend>
-          {permissionOptions.map((permissionOption) => (
-            <label key={permissionOption.key} style={{ display: 'block' }}>
-              <input
-                type="checkbox"
-                checked={(form.permissions || []).includes(permissionOption.key)}
-                onChange={() => togglePermission(permissionOption.key)}
-              />
-              {` ${permissionOption.label}`}
-            </label>
-          ))}
-        </fieldset>
-        
-        <div>
-          <button /*className="normal-size-button"*/ type="submit">
-            Add User
-          </button>
-        </div>
-      
-      </form>
+      <div className="page-tabs">
+        <button
+          type="button"
+          className={activeUserTab === USER_MANAGEMENT_TABS.CREATE_USER ? 'active-tab' : 'secondary-button'}
+          onClick={() => setActiveUserTab(USER_MANAGEMENT_TABS.CREATE_USER)}
+        >
+          Add User
+        </button>
+        <button
+          type="button"
+          className={activeUserTab === USER_MANAGEMENT_TABS.EXISTING_USERS ? 'active-tab' : 'secondary-button'}
+          onClick={() => setActiveUserTab(USER_MANAGEMENT_TABS.EXISTING_USERS)}
+        >
+          Existing Users
+        </button>
+      </div>
 
-      <ul className="user-list">
-        {users.map((entry) => (
-          <li key={entry._id}>
-            <span>
-              {`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.username} ({entry.gmail || entry.username})
-              {(entry.permissions || []).length ? ` — Rights: ${(entry.permissions || []).join(', ')}` : ''}
-            </span>
-            {normalizeRole(entry.role) !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
-          </li>
-        ))}
-      </ul>
+      {activeUserTab === USER_MANAGEMENT_TABS.CREATE_USER ? (
+        <form className="grid" onSubmit={onCreateUser}>
+          <input
+            required
+            placeholder="User First Name"
+            value={form.firstName}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, firstName: event.target.value }))}
+          />
+          <input
+            required
+            placeholder="User Last Name"
+            value={form.lastName}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, lastName: event.target.value }))}
+          />
+          <input
+            required
+            placeholder="Username"
+            value={form.username}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, username: event.target.value }))}
+          />
+          <input
+            required
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, password: event.target.value }))}
+          />
+          <input
+            required
+            type="email"
+            placeholder="Gmail Address"
+            value={form.gmail}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, gmail: event.target.value }))}
+          />
+          <input
+            required
+            placeholder="Phone Number"
+            value={form.phoneNumber}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+          />
+          <input
+            required
+            placeholder="CNIC"
+            value={form.cnic}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, cnic: event.target.value }))}
+          />
+          <input
+            required
+            className="full-line-field"
+            placeholder="Residential Address"
+            value={form.residentialAddress}
+            onChange={(event) => onFormChange((prev) => ({ ...prev, residentialAddress: event.target.value }))}
+          />
+
+          <fieldset>
+            <legend>User rights</legend>
+            {permissionOptions.map((permissionOption) => (
+              <label key={permissionOption.key} style={{ display: 'block' }}>
+                <input
+                  type="checkbox"
+                  checked={(form.permissions || []).includes(permissionOption.key)}
+                  onChange={() => togglePermission(permissionOption.key)}
+                />
+                {` ${permissionOption.label}`}
+              </label>
+            ))}
+          </fieldset>
+
+          <div>
+            <button type="submit">Add User</button>
+          </div>
+        </form>
+      ) : (
+        <ul className="user-list">
+          {users.map((entry) => (
+            <li key={entry._id}>
+              <span>
+                {`${entry.firstName || ''} ${entry.lastName || ''}`.trim() || entry.username} ({entry.gmail || entry.username})
+                {(entry.permissions || []).length ? ` — Rights: ${(entry.permissions || []).join(', ')}` : ''}
+              </span>
+              {normalizeRole(entry.role) !== 'super' ? <button onClick={() => onDeleteUser(entry._id)}>Remove</button> : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
