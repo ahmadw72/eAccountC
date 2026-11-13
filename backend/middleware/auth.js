@@ -1,4 +1,6 @@
 const { getSession } = require('../lib/sessions');
+const { SELLER_ROLE } = require('../lib/roles');
+const { PERMISSIONS } = require('../lib/permissions');
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -38,7 +40,10 @@ function requireAnyPermission(...permissions) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    if (req.auth.role === 'super') {
+    if (
+      req.auth.role === 'super' ||
+      (req.auth.role === SELLER_ROLE && permissions.includes(PERMISSIONS.SELL_PRODUCTS))
+    ) {
       return next();
     }
 
