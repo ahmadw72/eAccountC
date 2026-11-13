@@ -91,7 +91,12 @@ function apiFetch(path, options = {}, token) {
 }
 
 function hasPermission(user, permission) {
-  if (normalizeRole(user?.role) === 'super') {
+  const role = normalizeRole(user?.role);
+  if (role === 'super') {
+    return true;
+  }
+
+  if (role === SELLER_ROLE && permission === PERMISSIONS.SELL_PRODUCTS) {
     return true;
   }
 
